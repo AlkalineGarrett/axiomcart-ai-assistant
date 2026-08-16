@@ -1,0 +1,1711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AxiomCart — multi-agent assistant</title>
+<style>
+  :root{
+    color-scheme: light;   /* keep scrollbars/controls light even on a dark OS */
+    --hdr:52px;
+    --tp:26px;             /* horizontal padding of the .data / .trace columns */
+    --bg:#ffffff; --bg-alt:#f7f8fa; --fg:#1f2328; --fg-dim:#656d76;
+    --border:#d8dee4; --accent:#0969da;
+    --hl-bg:#cfe6ff; --hl-bar:#0969da;
+    --sel-bg:#e7f1ff; --hover-bg:#eef1f4;
+    --code-bg:#fbfcfd; --ln:#a8b1bb;
+    --k:#cf222e; --s:#0a3069; --c:#6e7781; --n:#0550ae; --f:#8250df; --d:#953800; --t:#116329;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--fg); overflow:hidden;
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+
+  /* ── app header + tabs ────────────────────────── */
+  .top{
+    height:var(--hdr); display:flex; align-items:stretch;
+    border-bottom:1px solid var(--border); background:var(--bg-alt); padding:0 18px;
+  }
+  .top .brand{
+    display:flex; align-items:center; gap:9px; padding-right:24px;
+    font-size:14.5px; font-weight:600; white-space:nowrap;
+  }
+  .top .brand .dot{width:9px; height:9px; border-radius:50%; background:var(--accent); flex:0 0 auto}
+  .top .brand small{font-weight:400; color:var(--fg-dim); font-size:12.5px}
+  .tabs{display:flex; align-items:stretch}
+  .tab{
+    appearance:none; background:none; border:0; border-bottom:2px solid transparent;
+    font:13.5px/1 inherit; color:var(--fg-dim); padding:0 15px; cursor:pointer;
+  }
+  .tab:hover{color:var(--fg)}
+  .tab.on{color:var(--fg); font-weight:600; border-bottom-color:var(--hl-bar)}
+  /* views on the left, one shared code pane on the right */
+  .shell{display:flex; height:calc(100vh - var(--hdr)); overflow:hidden}
+  .views{flex:1 1 auto; min-width:0; height:100%}
+  .view{display:none}
+  .view.on{display:block; height:100%; overflow:auto; -webkit-overflow-scrolling:touch}
+  .codepane{
+    flex:0 0 50%; max-width:50%; height:100%; overflow:auto;
+    border-left:1px solid var(--border); background:var(--code-bg);
+  }
+  .codepane[hidden]{display:none}
+  .closebtn{
+    margin-left:auto; appearance:none; background:none; border:0; cursor:pointer;
+    font-size:13px; line-height:1; color:var(--fg-dim); padding:2px 4px; border-radius:4px;
+  }
+  .closebtn:hover{color:var(--fg); background:var(--border)}
+
+  /* ── left ─────────────────────────────────────── */
+  .left-inner{padding:28px var(--tp) 60vh; max-width:1080px; margin:0 auto}
+  h1{font-size:23px; line-height:1.3; margin:0 0 14px; letter-spacing:-.01em}
+  .lede{margin:0 0 18px; color:var(--fg-dim)}
+  .lede em{color:var(--fg); font-style:italic}
+  .hint{
+    display:inline-flex; align-items:center; gap:7px;
+    font-size:12.5px; color:var(--fg-dim); background:var(--bg-alt);
+    border:1px solid var(--border); border-radius:999px; padding:5px 12px; margin:0 0 14px;
+  }
+  .hint kbd{
+    font:11px ui-monospace,SFMono-Regular,Menlo,monospace; background:var(--bg);
+    border:1px solid var(--border); border-bottom-width:2px; border-radius:4px; padding:1px 5px;
+  }
+  .block{
+    border:1px solid var(--border); border-radius:8px; background:var(--bg-alt);
+    padding:10px 0; overflow-x:auto;
+  }
+  .dl{
+    display:flex; align-items:center; position:relative;
+    font:13px/1.75 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    white-space:pre; padding:0 0 0 12px; border-left:3px solid transparent;
+    width:max-content; min-width:100%;
+  }
+  .dl.link{cursor:pointer}
+  .dl.link:hover{background:var(--hover-bg)}
+  .dl.on, .dl.on:hover{background:var(--sel-bg); border-left-color:var(--hl-bar)}
+  .dl .txt{flex:0 0 auto; padding-right:14px}
+  .dl .tag{
+    flex:0 0 auto; margin-left:auto; position:sticky; right:0;
+    background:inherit; padding:0 14px 0 16px;
+    font-size:11px; color:var(--accent); opacity:0; transition:opacity .12s;
+  }
+  .dl.link:hover .tag{background:var(--hover-bg)}
+  .dl.on .tag, .dl.on:hover .tag{background:var(--sel-bg)}
+  .dl.link:hover .tag{opacity:.9}
+  .dl.inert{color:var(--fg-dim)}
+
+  /* ── right ────────────────────────────────────── */
+  .head{
+    position:sticky; top:0; z-index:2; background:var(--bg-alt);
+    border-bottom:1px solid var(--border); padding:12px 16px;
+  }
+  .head .file{
+    font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--fg);
+    display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;
+  }
+  .head .lines{color:var(--fg-dim)}
+  .head .note{margin-top:6px; font-size:12.5px; color:var(--fg-dim); line-height:1.5}
+  .head .also{margin-top:8px; display:flex; gap:6px; flex-wrap:wrap}
+  .head .also button{
+    font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--accent);
+    background:var(--bg); border:1px solid var(--border); border-radius:999px;
+    padding:3px 10px; cursor:pointer;
+  }
+  .head .also button:hover{border-color:var(--accent)}
+  .head .also button.act{
+    background:var(--hl-bg); border-color:var(--hl-bar); color:var(--fg); cursor:default;
+  }
+  .code{
+    font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    padding:10px 0 60vh; min-width:max-content;
+  }
+  .row{display:flex; border-left:3px solid transparent; padding-right:20px}
+  .row.hl{background:var(--hl-bg); border-left-color:var(--hl-bar)}
+  .row .ln{
+    flex:0 0 52px; text-align:right; padding-right:14px; color:var(--ln);
+    user-select:none; -webkit-user-select:none;
+  }
+  .row.hl .ln{color:var(--fg-dim)}
+  .row .lc{white-space:pre}
+
+  /* ── demo data view ───────────────────────────── */
+  .data{padding:28px 26px 90px; max-width:1160px; margin:0 auto}
+  .data h1{margin-bottom:10px}
+  .data .intro{margin:0 0 8px; color:var(--fg-dim); max-width:70ch}
+  .data .intro code{
+    font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;
+    background:var(--bg-alt); border:1px solid var(--border); border-radius:5px; padding:1px 5px;
+  }
+  .sec{margin:34px 0 0}
+  .sec > h2{
+    font-size:16px; margin:0 0 4px; display:flex; align-items:baseline;
+    gap:10px; flex-wrap:wrap; letter-spacing:-.01em;
+  }
+  .sec > h2 .count{font-size:12.5px; font-weight:400; color:var(--fg-dim)}
+  .sec > .sub{margin:0 0 14px; font-size:13px; color:var(--fg-dim); max-width:78ch}
+  .srcbtn{
+    font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--accent);
+    background:var(--bg); border:1px solid var(--border); border-radius:999px;
+    padding:2px 9px; cursor:pointer; font-weight:400;
+  }
+  .srcbtn:hover{border-color:var(--accent)}
+
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:12px}
+  .card{border:1px solid var(--border); border-radius:9px; padding:13px 14px; background:var(--bg)}
+  .card .pid{font:11px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--fg-dim)}
+  .card h3{font-size:14px; margin:2px 0 8px; line-height:1.35}
+  .row-pills{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:9px}
+  .pill{
+    font-size:11.5px; line-height:1.7; padding:1px 9px; border-radius:999px;
+    background:var(--bg-alt); border:1px solid var(--border); color:var(--fg-dim); white-space:nowrap;
+  }
+  .pill.price{color:var(--fg); font-weight:600}
+  .pill.stock{background:#dafbe1; border-color:#aceebb; color:#116329}
+  .pill.oos{background:#ffebe9; border-color:#ffcecb; color:#a40e26}
+  .card .desc{margin:0 0 9px; font-size:12.5px; line-height:1.5; color:var(--fg-dim)}
+  .card ul{margin:0; padding-left:18px; font-size:12.5px; line-height:1.6; color:var(--fg-dim)}
+  .card .colors{margin-top:9px; font-size:12px; color:var(--fg-dim)}
+  .card details{margin-top:10px; border-top:1px solid var(--border); padding-top:9px}
+  .card summary{font-size:12px; color:var(--accent); cursor:pointer}
+  .card details pre{
+    margin:9px 0 0; padding:10px 11px; background:var(--bg-alt); border-radius:7px;
+    font:11.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; color:var(--fg-dim);
+  }
+
+  .tbl{width:100%; border-collapse:collapse; font-size:13px}
+  .tbl th{
+    text-align:left; font-size:11px; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--fg-dim); font-weight:600; padding:0 12px 8px; border-bottom:1px solid var(--border);
+  }
+  .tbl td{padding:11px 12px; border-bottom:1px solid var(--border); vertical-align:top}
+  .tbl tr.delay td{border-bottom:0; padding-bottom:0}
+  .tbl td.mono{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace}
+  .tbl td .email{display:block; font-size:12px; color:var(--fg-dim)}
+  .tbl th.amt{text-align:right}
+  .tbl td.amt{text-align:right; white-space:nowrap}
+  .why-delay{
+    font-size:12px; color:#953800; background:#fff8f0; border:1px solid #ffd8b5;
+    border-radius:6px; padding:5px 9px; display:inline-block;
+  }
+  .st{font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:999px; white-space:nowrap}
+  .st.shipped{background:#dafbe1; color:#116329}
+  .st.delayed{background:#fff1e5; color:#953800}
+  .st.processing{background:#ddf4ff; color:#0550ae}
+  .st.ordered{background:#f0f1f3; color:#57606a}
+
+  pre.policy{
+    margin:0; padding:15px 17px; background:var(--bg-alt); border:1px solid var(--border);
+    border-radius:9px; overflow-x:auto; font:12.5px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  .box{
+    border:1px dashed var(--border); border-radius:9px; padding:15px 17px;
+    font-size:13px; color:var(--fg-dim); line-height:1.6;
+  }
+  .box b{color:var(--fg); font-weight:600}
+  .box ul{margin:8px 0 0; padding-left:18px}
+  .box code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--fg)}
+
+  .asks{display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:10px}
+  .ask{border:1px solid var(--border); border-radius:9px; padding:12px 14px; background:var(--bg)}
+  .ask q{
+    display:block; font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:var(--fg); quotes:'"' '"';
+  }
+  .ask .why{display:block; margin-top:7px; font-size:12px; color:var(--fg-dim); line-height:1.55}
+  .ask .route{
+    display:inline-block; margin-top:8px; font-size:11px; color:var(--fg-dim);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+
+  /* ── prompt trace view ────────────────────────── */
+  .trace{padding:28px var(--tp) 90px; max-width:1080px; margin:0 auto}
+  .trace h1{margin-bottom:10px}
+  .srcbar{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:16px 0 0;
+    padding:11px 14px; border:1px solid var(--border); border-radius:9px; background:var(--bg-alt);
+  }
+  .seg{display:flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; background:var(--bg)}
+  .seg button{
+    appearance:none; background:none; border:0; padding:6px 13px;
+    font:12.5px inherit; color:var(--fg-dim); cursor:pointer;
+  }
+  .seg button.on{background:var(--hl-bg); color:var(--fg); font-weight:600}
+  .seg button:disabled{opacity:.4; cursor:not-allowed}
+  .srcbar .up{font-size:12.5px; color:var(--accent); cursor:pointer; text-decoration:underline}
+  .srcbar input[type=file]{display:none}
+  .srcbar .fname{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--fg-dim)}
+  .srcbar .clear{
+    appearance:none; border:1px solid var(--border); background:var(--bg); border-radius:999px;
+    font-size:11px; color:var(--fg-dim); padding:2px 9px; cursor:pointer;
+  }
+  .srcbar .hint{margin-left:auto; font-size:12px; color:var(--fg-dim)}
+  .dropping{outline:2px dashed var(--accent); outline-offset:-10px}
+
+  .howto{
+    margin:14px 0 0; padding:13px 15px; border:1px solid var(--border); border-radius:9px;
+    font-size:12.5px; line-height:1.6; color:var(--fg-dim);
+  }
+  .howto b{color:var(--fg)}
+  .howto pre{
+    margin:8px 0 0; padding:10px 12px; background:var(--bg-alt); border-radius:7px;
+    font:12px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--fg);
+    overflow-x:auto; white-space:pre;
+  }
+  .metabar{
+    display:flex; flex-wrap:wrap; gap:7px 20px; margin:14px 0 0; padding:12px 15px;
+    border:1px solid var(--border); border-radius:9px; font-size:12.5px; color:var(--fg-dim);
+  }
+  .metabar b{color:var(--fg); font-weight:600}
+  /* an agent starting is the biggest structural break on the page */
+  .nodebar{
+    margin:34px 0 14px; padding:11px 15px;
+    background:#c8ecd5; border:1px solid #96cfab; border-radius:8px;
+  }
+  .nodebar .nrow{display:flex; align-items:center; gap:11px; flex-wrap:wrap}
+  .nodebar .nn{
+    font:16px/1.25 ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-weight:700; color:#0d5227; letter-spacing:-.01em;
+  }
+  .nodebar .nsp{flex:1}
+  .nodebar .np{border-color:#96cfab}
+  .nodeexit{display:flex; justify-content:flex-end; margin:11px 0 0}
+  .nodeexit .nx{font-size:11.5px; color:#953800}
+  .nodebar .nr{
+    font-size:11px; color:#953800; background:#fff8f0; border:1px solid #ffd8b5;
+    border-radius:999px; padding:2px 9px; white-space:nowrap;
+  }
+  .nodebar .np{
+    font-size:11px; color:var(--accent); background:var(--bg); border:1px solid #c9dcf2;
+    border-radius:999px; padding:2px 9px; white-space:nowrap;
+  }
+
+  /* sub-tabs: one per graph execution, pinned while scrolling */
+  .subtabs{
+    position:sticky; top:0; z-index:4;
+    margin:20px calc(-1 * var(--tp)) 0; padding:9px var(--tp);
+    background:var(--bg); border-bottom:1px solid var(--border);
+  }
+  .stwrap{display:flex; gap:7px; overflow-x:auto; scrollbar-width:thin}
+  .stab{
+    display:flex; align-items:center; gap:8px; flex:0 1 auto; min-width:0; max-width:330px;
+    appearance:none; background:var(--bg-alt); border:1px solid var(--border); border-radius:999px;
+    padding:6px 14px 6px 7px; font:12.5px inherit; color:var(--fg-dim); cursor:pointer;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .stab:hover{color:var(--fg); border-color:var(--accent)}
+  .stab.on{background:var(--sel-bg); border-color:var(--hl-bar); color:var(--fg); font-weight:600}
+  /* the label needs its own box — text-overflow does not apply to a bare
+     text node inside a flex container */
+  .stab .sq{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .stab .sn{
+    flex:0 0 auto; width:20px; height:20px; border-radius:50%;
+    background:var(--bg); border:1px solid var(--border);
+    font:11px/19px ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:700; text-align:center;
+  }
+  .stab.on .sn{background:var(--hl-bar); border-color:var(--hl-bar); color:#fff}
+
+  .turnhead{margin:22px 0 6px}
+  .turnhead q{
+    quotes:'"' '"'; font:15px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--fg);
+    background:#fff5b8; box-shadow:inset 0 -1px 0 #e0bc3a;
+    border-radius:3px; padding:2px 5px;
+    box-decoration-break:clone; -webkit-box-decoration-break:clone;
+  }
+
+
+  .phase{margin:36px 0 15px; padding-bottom:9px; border-bottom:2px solid var(--border)}
+  .phase h2{font-size:15.5px; margin:0; letter-spacing:-.01em}
+  .phase .psub{margin:4px 0 0; font-size:12.5px; color:var(--fg-dim); max-width:80ch}
+
+  .call{border:1px solid var(--border); border-radius:10px; margin:0 0 13px; background:var(--bg); overflow:hidden}
+  .call > .ch{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:9px 13px; background:var(--bg-alt); border-bottom:1px solid var(--border);
+  }
+  .call .idx{
+    font:11px ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:700;
+    background:var(--bg); border:1px solid var(--border); border-radius:5px; padding:2px 7px; white-space:nowrap;
+  }
+  .call .cname{font-size:13.5px; font-weight:600}
+  .call .csig{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--fg-dim)}
+  .call .ch .srcbtn{margin-left:auto}
+  .call .cb{padding:13px}
+  .grp{
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.07em;
+    color:var(--fg-dim); font-weight:700; margin:0 0 9px;
+  }
+  .grp.ret{margin-top:15px; padding-top:13px; border-top:1px dashed var(--border)}
+
+  .msg{
+    border:1px solid var(--border); border-left-width:3px; border-radius:7px;
+    margin:0 0 8px; overflow:hidden;   /* clip the tool-call footer to the radius */
+  }
+  .msg .mh{display:flex; gap:9px; align-items:baseline; padding:7px 11px 5px}
+  .msg .mh .srcbtn{margin-left:auto; align-self:center}
+  .msg .role{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em}
+  .msg .mlabel{font-size:11.5px; color:var(--fg-dim)}
+  .msg pre{
+    margin:0; padding:2px 12px 10px; white-space:pre-wrap; word-break:break-word;
+    font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  .msg pre.notext{color:var(--fg-dim); font-style:italic}
+  /* a role the call never sent — shown so the omission is visible */
+  .msg.missing{border-style:dashed; background:none}
+  .msg.missing .role{opacity:.6}
+  .msg.missing .mlabel{font-style:italic}
+  /* tool calls carried by this message — same box, second labelled half */
+  .msg .part{
+    margin:0; padding:7px 12px 3px; font-size:10.5px; font-weight:700;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--fg-dim);
+  }
+  .msg .mtools{border-top:1px solid var(--border)}
+  .msg .mtools .tcall{margin:0 12px 9px; border:0; background:none; padding:0}
+  .msg.system{border-left-color:#8250df} .msg.system .role{color:#8250df}
+  .msg.human{border-left-color:#0969da}  .msg.human .role{color:#0969da}
+  .msg.ai{border-left-color:#1a7f37}     .msg.ai .role{color:#1a7f37}
+  .msg.tool{border-left-color:#bf8700}   .msg.tool .role{color:#bf8700}
+  .msg .err{
+    margin:0 12px 11px; padding:8px 10px; border-radius:6px; background:#ffebe9;
+    border:1px solid #ffcecb; color:#a40e26; font:11.5px ui-monospace,Menlo,monospace;
+  }
+  /* one expander for a whole run of carried-forward messages. Once open it
+     has to read as a container, not as more messages in the main flow. */
+  .msgset{
+    margin:0 0 8px; border:1px dashed var(--border); border-radius:8px;
+    background:var(--bg-alt); overflow:hidden;
+  }
+  .msgset > details > summary{
+    padding:9px 12px; cursor:pointer; font-size:12px; color:var(--fg-dim); list-style:none;
+  }
+  .msgset > details > summary::-webkit-details-marker{display:none}
+  .msgset > details > summary:before{content:'▸ '; color:var(--fg-dim)}
+  .msgset > details[open] > summary:before{content:'▾ '}
+  .msgset > details > summary:hover{color:var(--fg)}
+  .msgset > details > summary b{color:var(--fg); font-weight:600}
+  .msgset > details > summary .mlabel{margin-left:7px}
+
+  .msgset > details[open]{background:var(--bg)}
+  .msgset > details[open] > summary{
+    background:#e6eef8; border-bottom:1px solid #c9dcf2; color:var(--fg);
+  }
+  .msgset-body{padding:11px 11px 3px}
+  /* group membership is carried by the message background, not another rail —
+     the role colour bars are already doing that job on the left edge */
+  .msgset-body .msg{background:#e9f2fd; border-color:#c9dcf2}
+  .msgset-end{
+    padding:0 12px 10px; font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.07em; color:var(--fg-dim);
+  }
+
+  .tcall{
+    margin:2px 12px 11px; border:1px solid var(--border); border-radius:7px;
+    background:var(--bg-alt); padding:9px 11px;
+    font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  .tcall .tk{color:var(--fg-dim)}
+  .tcall .tn{color:#8250df; font-weight:700}
+  .tcall .ta{color:var(--s)}
+  .callnote{
+    margin:11px 0 0; padding:10px 12px; border-radius:7px; background:var(--bg-alt);
+    border:1px solid var(--border); font-size:12.5px; line-height:1.55; color:var(--fg-dim);
+  }
+  .callnote b{color:var(--fg)}
+  .callnote code{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--fg)}
+  .evt{
+    display:flex; gap:11px; align-items:flex-start; margin:0 0 13px; padding:11px 13px;
+    border:1px dashed var(--border); border-radius:9px; font-size:13px; line-height:1.55;
+  }
+  .evt .ei{font-size:15px; line-height:1.2}
+  .evt b{display:block; margin-bottom:3px}
+  .evt .d{color:var(--fg-dim); font-size:12.5px}
+  .evt code{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--fg)}
+  /* the graph stopping and starting again are the two events worth spotting
+     from across the page */
+  .evt.pause{background:#fff4e5; border:1px solid #e8a33d}
+  .evt.pause .ei{color:#bc4c00}
+  .evt.pause b{color:#7a3b00}
+  .evt.resume{background:#eefaf1; border:1px solid #8fd4a4}
+  .evt.resume .ei{color:#1a7f37}
+  .evt.resume b{color:#116329}
+
+  /* values interpolated into a prompt template at runtime — yellow so it
+     still reads inside the light-blue boxes of an expanded group */
+  mark.v, mark.task{
+    color:inherit; border-radius:3px; padding:1px 2px;
+    box-decoration-break:clone; -webkit-box-decoration-break:clone;
+  }
+  mark.v{background:#fff5b8; box-shadow:inset 0 -1px 0 #e0bc3a}
+  /* the task the classifier wrote, and the same text arriving as {task_desc} */
+  mark.task{background:#eadffb; box-shadow:inset 0 -1px 0 #b491e6}
+  mark.b{background:none; color:inherit; font-weight:700; padding:0}
+
+  .kw{color:var(--k)} .str{color:var(--s)} .com{color:var(--c); font-style:italic}
+  .num{color:var(--n)} .fn{color:var(--f)} .dec{color:var(--d)} .cls{color:var(--t)} .bi{color:var(--n)}
+
+  @media (max-width:820px){
+    body{overflow:auto}
+    .top{position:sticky; top:0; z-index:5}
+    :root{--tp:18px}
+    .data, .trace{padding:22px var(--tp) 60px}
+    .left-inner{padding-bottom:28px}
+    /* the app header is sticky on narrow screens, so pin below it */
+    .subtabs{top:var(--hdr)}
+    /* stack: the code pane drops below the view instead of beside it */
+    .shell{flex-direction:column; height:auto; overflow:visible}
+    .views{height:auto}
+    .view.on{height:auto; overflow:visible}
+    .codepane{
+      flex:1 1 auto; max-width:100%; height:auto; max-height:70vh;
+      border-left:0; border-top:1px solid var(--border);
+      position:sticky; bottom:0;
+    }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="dot"></span>AxiomCart <small>multi-agent assistant</small></div>
+  <nav class="tabs">
+    <button class="tab on" data-view="exec">Graph Execution</button>
+    <button class="tab" data-view="trace">Prompt Trace</button>
+    <button class="tab" data-view="data">Demo Data</button>
+  </nav>
+</header>
+
+<div class="shell">
+  <div class="views">
+    <section class="view on" id="view-exec">
+      <div class="left-inner">
+        <h1>How the Graph Executes — Step by Step</h1>
+        <p class="lede">Here's what happens when a user sends <em>"My order is delayed and I want to see some headphones"</em>:</p>
+        <div class="hint">Click any line to open its code <kbd>↑</kbd><kbd>↓</kbd> to step through</div>
+        <div class="block" id="block"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-trace">
+      <div class="trace" id="traceroot"></div>
+    </section>
+
+    <section class="view" id="view-data">
+      <div class="data" id="dataroot"></div>
+    </section>
+  </div>
+
+  <!-- shared code viewer: opens beside whichever tab is active -->
+  <aside class="codepane" id="codepane" hidden>
+    <div class="head">
+      <div class="file">
+        <span id="fname"></span><span class="lines" id="flines"></span>
+        <button class="closebtn" id="codeclose" title="close">✕</button>
+      </div>
+      <div class="note" id="fnote"></div>
+      <div class="also" id="falso"></div>
+    </div>
+    <div class="code" id="code"></div>
+  </aside>
+</div>
+
+<script>
+/* Catalog / orders / policies, parsed out of src/data.py at build time. */
+const DATA = /*__DATA__*/{
+"PRODUCT_CATALOG": [
+{
+"id": "PROD001",
+"name": "Air Jordan 1 Retro High OG",
+"category": "Footwear",
+"brand": "Nike",
+"price": 8999,
+"rating": 4.8,
+"features": [
+"Leather upper",
+"Air-Sole cushioning",
+"Rubber outsole",
+"Iconic colorway"
+],
+"description": "Classic basketball sneaker with premium leather construction and legendary style.",
+"in_stock": true,
+"colors": [
+"Black/Red",
+"Chicago",
+"Royal Blue"
+]
+},
+{
+"id": "PROD002",
+"name": "Bose QuietComfort 45 Headphones",
+"category": "Electronics",
+"brand": "Bose",
+"price": 10199,
+"rating": 4.7,
+"features": [
+"Active Noise Cancellation",
+"24-hour battery",
+"Bluetooth 5.1",
+"USB-C charging"
+],
+"description": "Premium wireless noise-cancelling headphones with legendary Bose sound quality.",
+"in_stock": true,
+"colors": [
+"Black",
+"White Smoke"
+]
+},
+{
+"id": "PROD003",
+"name": "Sony WH-1000XM5 Headphones",
+"category": "Electronics",
+"brand": "Sony",
+"price": 12999,
+"rating": 4.9,
+"features": [
+"Industry-leading ANC",
+"30-hour battery",
+"Speak-to-Chat",
+"LDAC Hi-Res Audio"
+],
+"description": "Sony's flagship noise-cancelling headphones with exceptional sound quality.",
+"in_stock": true,
+"colors": [
+"Black",
+"Silver"
+]
+},
+{
+"id": "PROD004",
+"name": "Usha Maxx Air 400mm Table Fan",
+"category": "Home Appliances",
+"brand": "Usha",
+"price": 2700,
+"rating": 4.3,
+"features": [
+"400mm sweep",
+"3-speed control",
+"Oscillation",
+"Low power consumption"
+],
+"description": "Powerful table fan with superior air delivery and energy efficiency.",
+"in_stock": true,
+"colors": [
+"White",
+"Blue"
+]
+},
+{
+"id": "PROD005",
+"name": "iPhone 15 Pro Max",
+"category": "Electronics",
+"brand": "Apple",
+"price": 159900,
+"rating": 4.8,
+"features": [
+"A17 Pro chip",
+"Titanium design",
+"48MP camera",
+"USB-C",
+"5x optical zoom"
+],
+"description": "Apple's most advanced iPhone with titanium design and professional camera.",
+"in_stock": true,
+"colors": [
+"Natural Titanium",
+"Blue Titanium",
+"Black Titanium"
+]
+},
+{
+"id": "PROD006",
+"name": "Samsung Galaxy S24 Ultra",
+"category": "Electronics",
+"brand": "Samsung",
+"price": 134999,
+"rating": 4.7,
+"features": [
+"Snapdragon 8 Gen 3",
+"200MP camera",
+"S Pen included",
+"Galaxy AI"
+],
+"description": "Samsung's flagship smartphone with Galaxy AI and an exceptional camera system.",
+"in_stock": true,
+"colors": [
+"Titanium Gray",
+"Titanium Black",
+"Titanium Violet"
+]
+},
+{
+"id": "PROD007",
+"name": "MacBook Air M3 13-inch",
+"category": "Electronics",
+"brand": "Apple",
+"price": 114900,
+"rating": 4.9,
+"features": [
+"M3 chip",
+"18-hour battery",
+"Liquid Retina display",
+"MagSafe charging"
+],
+"description": "Supercharged by M3 chip with all-day battery life and a stunning display.",
+"in_stock": true,
+"colors": [
+"Midnight",
+"Starlight",
+"Space Gray",
+"Silver"
+]
+},
+{
+"id": "PROD008",
+"name": "boAt Airdopes 141 TWS",
+"category": "Electronics",
+"brand": "boAt",
+"price": 1299,
+"rating": 4.2,
+"features": [
+"42-hour playback",
+"ENx Technology",
+"IPX4 water resistance",
+"BEAST Mode"
+],
+"description": "True wireless earbuds with massive battery life and immersive sound.",
+"in_stock": true,
+"colors": [
+"Active Black",
+"Bold Blue",
+"Cherry Blossom"
+]
+}
+],
+"ORDER_DATABASE": {
+"ORD101": {
+"product": "Air Jordan 1 Retro High OG",
+"customer_name": "Rahul Sharma",
+"customer_email": "rahul.sharma@example.com",
+"status": "Shipped",
+"price": 8999,
+"order_date": "2026-02-10",
+"estimated_delivery": "2026-02-13"
+},
+"ORD102": {
+"product": "Bose QuietComfort 45 Headphones",
+"customer_name": "Priya Patel",
+"customer_email": "priya.patel@example.com",
+"status": "Delayed",
+"delay_reason": "Bad weather conditions in transit region",
+"price": 10199,
+"order_date": "2026-02-08",
+"estimated_delivery": "2026-02-15"
+},
+"ORD103": {
+"product": "Usha Maxx Air 400mm Table Fan",
+"customer_name": "Amit Kumar",
+"customer_email": "amit.kumar@example.com",
+"status": "Processing",
+"price": 2700,
+"order_date": "2026-02-12",
+"estimated_delivery": "2026-02-20"
+},
+"ORD104": {
+"product": "iPhone 15 Pro Max",
+"customer_name": "Vikram Singh",
+"customer_email": "vikram.singh@example.com",
+"status": "Ordered",
+"price": 159900,
+"order_date": "2026-02-13",
+"estimated_delivery": "2026-02-17"
+}
+},
+"SUPPORT_POLICIES": "SHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools"
+}/*__END_DATA__*/;
+
+/* Source files, embedded at build time. */
+const FILES = /*__FILES__*/{
+"src/graph.py": "\"\"\"\nBuild and compile the LangGraph StateGraph.\n\nGraph topology:\n\n  START → orchestrator ─┬─ product_agent ──→ synthesizer → END\n                        └─ support_agent ──↗\n\nEach agent is internally a subgraph with a model ⇄ tools loop.\nThe MemorySaver checkpointer persists conversation history across\nturns, enabling multi-turn HITL (agent asks a question on one turn,\nuser answers on the next).\n\"\"\"\n\nfrom langgraph.checkpoint.memory import MemorySaver\nfrom langgraph.graph import END, START, StateGraph\n\nfrom src.config import get_logger\nfrom src.nodes import orchestrator_node, product_agent, support_agent, synthesizer_node\nfrom src.state import AxiomCartState\n\nlogger = get_logger(\"graph\")\n\n\ndef build_graph() -> StateGraph:\n    \"\"\"Create, wire, and compile the AxiomCart multi-agent graph.\"\"\"\n\n    builder = StateGraph(AxiomCartState)\n\n    # ── Add nodes ────────────────────────────────────────\n    builder.add_node(\"orchestrator\", orchestrator_node)\n    builder.add_node(\"product_agent\", product_agent)\n    builder.add_node(\"support_agent\", support_agent)\n    builder.add_node(\"synthesizer\", synthesizer_node)\n\n    # ── Add edges ────────────────────────────────────────\n    builder.add_edge(START, \"orchestrator\")\n    builder.add_edge(\"synthesizer\", END)\n\n    # ── Compile with checkpointer ────────────────────────\n    # MemorySaver persists graph state so that interrupt()-based\n    # HITL can pause and resume, and conversation history carries\n    # forward between queries.\n    memory = MemorySaver()\n    graph = builder.compile(checkpointer=memory)\n\n    logger.info(\"Graph compiled  (with MemorySaver for conversation persistence)\")\n    return graph\n\n\n# Module-level singleton\naxiomcart_graph = build_graph()\n",
+"src/nodes.py": "\"\"\"\nGraph node functions.\n\nArchitecture:\n\n  Main graph:\n    START → orchestrator ─┬─ product_agent ──→ synthesizer → END\n                          └─ support_agent ──↗\n\n  Each agent is internally a compiled subgraph with a model ⇄ tools loop:\n    START → model ─┬─ tools → model (loop back)\n                   └─ END    (no tool calls → done)\n\nKey concepts:\n  • Tool nodes: tools are separate graph nodes, not manual loops.\n    LangGraph controls the model ⇄ tools cycle natively.\n  • Parallel dispatch via Send()\n  • HITL via conversation persistence — if an agent needs info\n    (e.g. order ID), it simply asks. The answer arrives on the\n    next turn with full conversation history.\n  • Response synthesis for multi-agent queries\n\"\"\"\n\nfrom __future__ import annotations\n\nimport operator\nfrom typing import Annotated, Literal, TypedDict\n\nfrom langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage, ToolMessage\nfrom langgraph.graph import END, START, StateGraph\nfrom langgraph.types import Command, Send, interrupt\n\nfrom src.config import get_logger, llm\nfrom src.data import SUPPORT_POLICIES\nfrom src.state import AxiomCartState, ClassificationResult, WorkerInput\nfrom src.tools import (\n    escalate_to_human,\n    get_order_status,\n    search_product_catalog,\n)\n\nlogger = get_logger(\"nodes\")\n\n\n# ── Agent Prompts ────────────────────────────────────────────\n\nPRODUCT_PROMPT = \"\"\"\\\nYou are the Product Discovery Agent for AxiomCart.\n\nROLE: Help customers find and learn about products. You also handle\ngeneral conversation (greetings, thanks, chitchat).\n\nTOOLS:\n  search_product_catalog – semantic search over our product database\n\nGUIDELINES:\n- For greetings or general chat, respond warmly without calling tools.\n- For product questions, always search the catalog first.\n- Highlight key features and prices.\n- If a product is out of stock, suggest alternatives.\n- If the search returns products the customer has already seen or that\n  don't match what they asked for (wrong brand, wrong category, etc.),\n  be honest and say we don't currently carry what they're looking for.\n  Do NOT present irrelevant products as if they match the request.\n- Keep responses concise and helpful.\n\"\"\"\n\nSUPPORT_PROMPT = f\"\"\"\\\nYou are the Sales Support Agent for AxiomCart.\n\nROLE: Handle order enquiries and escalate issues to human agents.\n\nTOOLS:\n  get_order_status   – look up an order by order ID or customer email\n  escalate_to_human  – create a ticket for human support (sends email notification)\n\nPOLICIES:\n{SUPPORT_POLICIES}\n\nGUIDELINES:\n- If the customer has NOT provided an order ID or email, you MUST ask\n  for it before calling any tools. Say something like: \"Could you\n  please provide your order ID (e.g. ORD101) or registered email\n  address so I can look up your order?\"\n- Be empathetic and professional.\n- Only call escalate_to_human when the customer explicitly asks for\n  a human agent OR the issue cannot be resolved.\n- After retrieving information, respond directly to the customer.\n\"\"\"\n\n\n# ── Tool bindings ────────────────────────────────────────────\n\nproduct_tools = [search_product_catalog]\nproduct_tools_by_name = {t.name: t for t in product_tools}\n\nsales_tools = [get_order_status, escalate_to_human]\nsales_tools_by_name = {t.name: t for t in sales_tools}\n\nproduct_llm = llm.bind_tools(product_tools)\nsales_llm   = llm.bind_tools(sales_tools)\n\n\n# ═══════════════════════════════════════════════════════════\n#  Agent Subgraphs (model ⇄ tools)\n# ═══════════════════════════════════════════════════════════\n\nclass AgentState(TypedDict):\n    \"\"\"Minimal state for the model ⇄ tools subgraph loop.\"\"\"\n    messages: Annotated[list[AnyMessage], operator.add]\n\n\ndef should_continue(state: AgentState) -> str:\n    \"\"\"Route after model node: tool_calls → tools, otherwise → END.\"\"\"\n    last = state[\"messages\"][-1]\n    if hasattr(last, \"tool_calls\") and last.tool_calls:\n        return \"tools\"\n    return END\n\n\n# ── Product subgraph ─────────────────────────────────────────\n\ndef product_model(state: AgentState) -> dict:\n    \"\"\"Call the product LLM (with tools bound).\"\"\"\n    response = product_llm.invoke(state[\"messages\"])\n    logger.info(\"[product:model] tool_calls=%s\", bool(response.tool_calls))\n    return {\"messages\": [response]}\n\n\ndef product_tools(state: AgentState) -> dict:\n    \"\"\"Execute tool calls from the product LLM.\"\"\"\n    last = state[\"messages\"][-1]\n    results = []\n    for tc in last.tool_calls:\n        name, args = tc[\"name\"], tc[\"args\"]\n        logger.info(\"[product:tools] %s(%s)\", name, args)\n        out = product_tools_by_name[name].invoke(args) if name in product_tools_by_name else f\"Unknown tool: {name}\"\n        results.append(ToolMessage(content=str(out), tool_call_id=tc[\"id\"]))\n    return {\"messages\": results}\n\n\npb = StateGraph(AgentState)\npb.add_node(\"model\", product_model)\npb.add_node(\"tools\", product_tools)\npb.add_edge(START, \"model\")\npb.add_conditional_edges(\"model\", should_continue)\npb.add_edge(\"tools\", \"model\")\nproduct_subgraph = pb.compile()\n\n\n# ── Support subgraph ─────────────────────────────────────────\n\ndef support_model(state: AgentState) -> dict:\n    \"\"\"Call the support LLM. If it asks for info without calling tools,\n    use interrupt() to pause the graph and collect user input.\"\"\"\n    response = sales_llm.invoke(state[\"messages\"])\n    logger.info(\"[support:model] tool_calls=%s\", bool(response.tool_calls))\n\n    # If no tool calls and no tools have been called yet,\n    # the agent is asking for missing info — interrupt for HITL\n    if not response.tool_calls:\n        any_tools_called = any(isinstance(m, ToolMessage) for m in state[\"messages\"])\n        if not any_tools_called:\n            logger.info(\"[support:model] HITL: interrupting to collect user info\")\n            user_reply = interrupt(response.content)\n            logger.info(\"[support:model] HITL: user replied %r\", user_reply)\n            return {\"messages\": [response, HumanMessage(content=str(user_reply))]}\n\n    return {\"messages\": [response]}\n\n\ndef support_tools(state: AgentState) -> dict:\n    \"\"\"Execute tool calls from the support LLM.\"\"\"\n    last = state[\"messages\"][-1]\n    results = []\n    for tc in last.tool_calls:\n        name, args = tc[\"name\"], tc[\"args\"]\n        logger.info(\"[support:tools] %s(%s)\", name, args)\n        out = sales_tools_by_name[name].invoke(args) if name in sales_tools_by_name else f\"Unknown tool: {name}\"\n        results.append(ToolMessage(content=str(out), tool_call_id=tc[\"id\"]))\n    return {\"messages\": results}\n\n\ndef support_should_continue(state: AgentState) -> str:\n    \"\"\"Route after support model node. If the last message is a\n    HumanMessage (user answered via HITL interrupt), loop back to model.\"\"\"\n    last = state[\"messages\"][-1]\n    if isinstance(last, HumanMessage):\n        return \"model\"\n    if hasattr(last, \"tool_calls\") and last.tool_calls:\n        return \"tools\"\n    return END\n\n\nsb = StateGraph(AgentState)\nsb.add_node(\"model\", support_model)\nsb.add_node(\"tools\", support_tools)\nsb.add_edge(START, \"model\")\nsb.add_conditional_edges(\"model\", support_should_continue)\nsb.add_edge(\"tools\", \"model\")\nsupport_subgraph = sb.compile()\n\n\n# ── Conversation context helper ──────────────────────────────\n\ndef build_context(messages: list[AnyMessage]) -> str:\n    \"\"\"Format prior conversation turns as text for agent context.\"\"\"\n    if not messages:\n        return \"\"\n    parts = []\n    for m in messages:\n        if isinstance(m, HumanMessage):\n            parts.append(f\"Customer: {m.content}\")\n        elif isinstance(m, AIMessage):\n            parts.append(f\"Assistant: {m.content}\")\n    if not parts:\n        return \"\"\n    return \"CONVERSATION SO FAR:\\n\" + \"\\n\".join(parts) + \"\\n\\n\"\n\n\n# ═══════════════════════════════════════════════════════════\n#  NODE 1 — Orchestrator\n# ═══════════════════════════════════════════════════════════\n\ndef orchestrator_node(state: AxiomCartState) -> Command[Literal[\"product_agent\", \"support_agent\", \"synthesizer\"]]:\n    \"\"\"Classify the user query and dispatch to the right agent(s).\"\"\"\n    user_query = state.get(\"user_query\", \"\")\n    if not user_query and state.get(\"messages\"):\n        user_query = state[\"messages\"][-1].content\n\n    logger.info(\"Orchestrator  query=%r\", user_query)\n\n    prompt = (\n        f'Analyse this customer query and decide which agent(s) should handle it.\\n\\n'\n        f'QUERY: \"{user_query}\"\\n\\n'\n        'AGENTS:\\n'\n        '  product_agent – product searches, recommendations, catalog questions,\\n'\n        '                  AND general conversation (greetings, thanks, chitchat)\\n'\n        '  support_agent   – order status, complaints, escalation to human support\\n\\n'\n        'RULES:\\n'\n        '1. Greetings, chitchat, general questions (hi, hello, thanks, how are you)\\n'\n        '   → product_agent only\\n'\n        '2. Product-only queries  → product_agent only\\n'\n        '3. Order/support queries → support_agent only\\n'\n        '4. Mixed queries         → BOTH agents, requires_synthesis = true\\n'\n        '\\nIMPORTANT: Only route to support_agent when the query clearly involves\\n'\n        'an order, complaint, or support issue. When in doubt, use product_agent.\\n'\n    )\n\n    classifier = llm.with_structured_output(ClassificationResult)\n    try:\n        classification = classifier.invoke(prompt)\n    except Exception:\n        logger.exception(\"Classification failed — defaulting to support_agent\")\n        classification = ClassificationResult(\n            tasks=[], requires_synthesis=False,\n            reasoning=\"Fallback: classification error\",\n        )\n\n    logger.info(\"  routing=%s  synthesis=%s\",\n                [t.agent for t in classification.tasks],\n                classification.requires_synthesis)\n\n    targets: list[Send] = []\n    for task in classification.tasks:\n        targets.append(Send(task.agent, {\n            \"messages\": state.get(\"messages\", []),\n            \"user_query\": user_query,\n            \"task_description\": task.task_description,\n        }))\n\n    if not targets:\n        targets = [Send(\"synthesizer\", {})]\n\n    return Command(\n        update={\n            \"tasks\": classification.tasks,\n            \"requires_synthesis\": classification.requires_synthesis,\n            \"user_query\": user_query,\n            \"agent_results\": [],  # reset stale results from prior turns\n        },\n        goto=targets,\n    )\n\n\n# ═══════════════════════════════════════════════════════════\n#  NODE 2 — Product Agent\n# ═══════════════════════════════════════════════════════════\n\ndef product_agent(state: WorkerInput) -> Command[Literal[\"synthesizer\"]]:\n    \"\"\"Run the product-discovery agent via its model ⇄ tools subgraph.\"\"\"\n    user_query = state.get(\"user_query\", \"\")\n    task_desc  = state.get(\"task_description\", user_query)\n    logger.info(\"Product Agent  task=%r\", task_desc)\n\n    context = build_context(state.get(\"messages\", []))\n\n    result = product_subgraph.invoke({\"messages\": [\n        SystemMessage(content=PRODUCT_PROMPT),\n        HumanMessage(content=f\"{context}Task: {task_desc}\\nCustomer query: {user_query}\"),\n    ]})\n\n    answer = result[\"messages\"][-1].content\n\n    return Command(\n        update={\"agent_results\": [{\"source\": \"product_discovery\", \"response\": answer}]},\n        goto=\"synthesizer\",\n    )\n\n\n# ═══════════════════════════════════════════════════════════\n#  NODE 3 — Support Agent\n# ═══════════════════════════════════════════════════════════\n\ndef support_agent(state: WorkerInput) -> Command[Literal[\"synthesizer\"]]:\n    \"\"\"Run the sales-support agent via its model ⇄ tools subgraph.\n\n    HITL is handled through conversation persistence: if the agent\n    needs info (e.g. order ID), it responds with a question. The\n    user's answer arrives on the next turn via the message history.\n    \"\"\"\n    user_query = state.get(\"user_query\", \"\")\n    task_desc  = state.get(\"task_description\", user_query)\n    logger.info(\"Support Agent  task=%r\", task_desc)\n\n    context = build_context(state.get(\"messages\", []))\n\n    result = support_subgraph.invoke({\"messages\": [\n        SystemMessage(content=SUPPORT_PROMPT),\n        HumanMessage(content=f\"{context}Task: {task_desc}\\nCustomer query: {user_query}\"),\n    ]})\n\n    answer = result[\"messages\"][-1].content\n\n    return Command(\n        update={\"agent_results\": [{\"source\": \"sales_support\", \"response\": answer}]},\n        goto=\"synthesizer\",\n    )\n\n\n# ═══════════════════════════════════════════════════════════\n#  NODE 4 — Synthesizer\n# ═══════════════════════════════════════════════════════════\n\ndef synthesizer_node(state: AxiomCartState) -> dict:\n    \"\"\"Merge results from one or more agents into a single user-facing reply.\"\"\"\n    results = state.get(\"agent_results\", [])\n    user_query = state.get(\"user_query\", \"\")\n\n    if not results:\n        logger.warning(\"Synthesizer received no agent results\")\n        return {\"final_answer\": \"Sorry, I couldn't process that request. Please try again.\"}\n\n    if len(results) == 1:\n        logger.info(\"Synthesizer  single-agent pass-through\")\n        return {\"final_answer\": results[0][\"response\"]}\n\n    logger.info(\"Synthesizer  merging %d agent responses\", len(results))\n\n    parts = \"\\n\\n\".join(\n        f\"[{r['source'].upper()}]:\\n{r['response']}\" for r in results\n    )\n    prompt = (\n        f\"You are combining responses from multiple specialist agents.\\n\\n\"\n        f\"CUSTOMER QUERY: {user_query}\\n\\n\"\n        f\"AGENT RESPONSES:\\n{parts}\\n\\n\"\n        \"Write a single, coherent reply that addresses every part of the \"\n        \"customer's query. Be concise. Speak as 'AxiomCart Assistant'.\"\n    )\n\n    merged = llm.invoke(prompt)\n    return {\"final_answer\": merged.content}",
+"src/state.py": "\"\"\"\nLangGraph state definitions.\n\nAxiomCartState       – the main graph state shared by all nodes.\nWorkerInput          – the payload sent to agent workers via Send().\nAgentTask            – structured routing output from the orchestrator.\nClassificationResult – orchestrator's full decision.\n\"\"\"\n\nfrom __future__ import annotations\n\nimport operator\nfrom typing import Annotated, List, Literal, TypedDict\n\nfrom langchain_core.messages import AnyMessage\nfrom pydantic import BaseModel, Field\n\n\ndef agent_results_reducer(current: list[dict], update: list[dict]) -> list[dict]:\n    \"\"\"Like operator.add, but an empty list signals a reset.\"\"\"\n    if not update:\n        return []\n    return current + update\n\n\nclass AgentTask(BaseModel):\n    \"\"\"A single task assigned to a specialist agent.\"\"\"\n\n    agent: Literal[\"product_agent\", \"support_agent\"] = Field(\n        description=\"Which agent handles this task\"\n    )\n    task_description: str = Field(\n        description=\"What the agent should do\"\n    )\n\n\nclass ClassificationResult(BaseModel):\n    \"\"\"Orchestrator's routing decision.\"\"\"\n\n    tasks: List[AgentTask] = Field(description=\"Tasks to dispatch\")\n    requires_synthesis: bool = Field(\n        description=\"True when multiple agents must have their results merged\"\n    )\n    reasoning: str = Field(description=\"Brief explanation of routing decision\")\n\n\nclass AxiomCartState(TypedDict):\n    \"\"\"Top-level state that flows through the entire graph.\"\"\"\n\n    # Conversation\n    messages: Annotated[list[AnyMessage], operator.add]\n    user_query: str\n\n    # Routing\n    tasks: list[AgentTask]\n    requires_synthesis: bool\n\n    # Collected results from agents (operator.add merges parallel results)\n    agent_results: Annotated[list[dict], agent_results_reducer]\n\n    # Final response returned to the user\n    final_answer: str\n\n\nclass WorkerInput(TypedDict):\n    \"\"\"Payload delivered to an agent worker node via Send().\n\n    NOTE: This is intentionally flat — no nested Pydantic objects —\n    so that Send() serialisation works without surprises.\n    \"\"\"\n\n    messages: Annotated[list[AnyMessage], operator.add]\n    user_query: str\n    task_description: str\n",
+"src/tools.py": "\"\"\"\nAgent Tools — the concrete actions agents can take.\n\nProduct Discovery (1 tool):\n  • search_product_catalog  – RAG semantic search\n\nSales Support (2 tools):\n  • get_order_status        – order lookup by ID or email\n  • escalate_to_human       – HITL ticket + optional email via Resend\n\"\"\"\n\nfrom __future__ import annotations\n\nimport random\nimport time\n\nfrom langchain_core.tools import tool\n\nfrom src.data import ESCALATION_QUEUE\nfrom src.config import get_logger\nfrom src.data import ORDER_DATABASE\nfrom src.rag import product_vectorstore\n\nlogger = get_logger(\"tools\")\n\n\n# ── helpers ──────────────────────────────────────────────────\n\ndef normalise_order_id(raw: str) -> str:\n    \"\"\"Accept 'ORD101', 'ORD-101', 'ord-101', or just '101' → 'ORD101'.\"\"\"\n    upper = raw.upper().strip()\n    clean = upper.replace(\"ORD-\", \"\").replace(\"ORD\", \"\").strip()\n    return f\"ORD{clean}\"\n\n\ndef lookup_order_by_email(email: str) -> dict | None:\n    \"\"\"Find the first order matching a customer email.\"\"\"\n    email_lower = email.lower().strip()\n    for oid, order in ORDER_DATABASE.items():\n        if order[\"customer_email\"].lower() == email_lower:\n            return {\"order_id\": oid, **order}\n    return None\n\n# ═══════════════════════════════════════════════════════════\n#  PRODUCT DISCOVERY TOOL\n# ═══════════════════════════════════════════════════════════\n\n@tool\ndef search_product_catalog(query: str) -> str:\n    \"\"\"Search the AxiomCart product catalog using semantic search (RAG).\n\n    Args:\n        query: natural-language search, e.g. \"wireless headphones under 5000\"\n    \"\"\"\n    logger.info(\"search_product_catalog  query=%r\", query)\n    try:\n        docs = product_vectorstore.similarity_search(query, k=3)\n        if not docs:\n            return \"No products found matching your query.\"\n        results = \"Found the following products:\\n\\n\"\n        for i, doc in enumerate(docs, 1):\n            results += f\"Product {i}:\\n{doc.page_content}\\n\\n\"\n        return results\n    except Exception as exc:\n        logger.exception(\"Catalog search failed\")\n        return f\"Error searching catalog: {exc}\"\n\n\n# ═══════════════════════════════════════════════════════════\n#  SALES SUPPORT TOOLS\n# ═══════════════════════════════════════════════════════════\n\n@tool\ndef get_order_status(identifier: str) -> str:\n    \"\"\"Look up the current status of a customer order.\n\n    Args:\n        identifier: an order ID (e.g. \"ORD101\") OR a customer email address\n    \"\"\"\n    logger.info(\"get_order_status  identifier=%r\", identifier)\n\n    # Try as email first\n    if \"@\" in identifier:\n        match = lookup_order_by_email(identifier)\n        if match:\n            oid = match[\"order_id\"]\n            order = {k: v for k, v in match.items() if k != \"order_id\"}\n        else:\n            return f\"No order found for email: {identifier}\"\n    else:\n        oid = normalise_order_id(identifier)\n        order = ORDER_DATABASE.get(oid)\n        if not order:\n            return f\"Order {oid} not found. Please verify the order ID.\"\n\n    info = (\n        f\"Order {oid}:\\n\"\n        f\"  Customer : {order['customer_name']} ({order['customer_email']})\\n\"\n        f\"  Product  : {order['product']}\\n\"\n        f\"  Price    : ₹{order['price']:,}\\n\"\n        f\"  Status   : {order['status']}\\n\"\n        f\"  Ordered  : {order['order_date']}\\n\"\n        f\"  ETA      : {order['estimated_delivery']}\"\n    )\n    if order.get(\"delay_reason\"):\n        info += f\"\\n  Delay    : {order['delay_reason']}\"\n    return info\n\n\n@tool\ndef escalate_to_human(order_id: str, issue_summary: str, priority: str = \"normal\") -> str:\n    \"\"\"Escalate to a human support agent. Customer details are pulled\n    from the order database. An email notification is sent if Resend\n    is configured.\n\n    Args:\n        order_id:      the related order (e.g. \"ORD101\")\n        issue_summary: brief description of the problem\n        priority:      low | normal | high | urgent\n    \"\"\"\n    order_id = normalise_order_id(order_id)\n    logger.info(\"escalate_to_human  order_id=%s  priority=%s\", order_id, priority)\n    order = ORDER_DATABASE.get(order_id)\n\n    customer_name  = order[\"customer_name\"]  if order else \"Unknown\"\n    customer_email = order[\"customer_email\"] if order else \"Unknown\"\n\n    ticket_id = f\"ESC-{random.randint(10000, 99999)}\"\n    ESCALATION_QUEUE.append({\n        \"ticket_id\": ticket_id,\n        \"timestamp\": time.strftime(\"%Y-%m-%d %H:%M:%S\"),\n        \"customer_name\": customer_name,\n        \"customer_email\": customer_email,\n        \"order_id\": order_id,\n        \"issue_summary\": issue_summary,\n        \"priority\": priority,\n        \"status\": \"open\",\n    })\n\n    response_times = {\"urgent\": \"1 hour\", \"high\": \"4 hours\", \"normal\": \"24 hours\", \"low\": \"48 hours\"}\n\n\n    return (\n        f\"Escalation ticket created.\\n\"\n        f\"  Ticket   : {ticket_id}\\n\"\n        f\"  Priority : {priority.upper()}\\n\"\n        f\"  Customer : {customer_name} ({customer_email})\\n\"\n        f\"  ETA      : within {response_times.get(priority, '24 hours')}\\n\"\n        # f\"  Email    : {email_status or 'No email sent (unknown customer)'}\\n\\n\"\n        f\"A human agent will follow up shortly.\"\n    )\n",
+"src/data.py": "\"\"\"\nStatic data: Product catalog, order database, and support policies.\n\nIn production these would come from a real database. For the demo\nthey are plain Python structures so you can see everything at a glance.\n\"\"\"\n\nfrom __future__ import annotations\n\n# ── Product Catalog (used by RAG) ───────────────────────────\nPRODUCT_CATALOG: list[dict] = [\n    {\n        \"id\": \"PROD001\",\n        \"name\": \"Air Jordan 1 Retro High OG\",\n        \"category\": \"Footwear\",\n        \"brand\": \"Nike\",\n        \"price\": 8999,\n        \"rating\": 4.8,\n        \"features\": [\"Leather upper\", \"Air-Sole cushioning\", \"Rubber outsole\", \"Iconic colorway\"],\n        \"description\": \"Classic basketball sneaker with premium leather construction and legendary style.\",\n        \"in_stock\": True,\n        \"colors\": [\"Black/Red\", \"Chicago\", \"Royal Blue\"],\n    },\n    {\n        \"id\": \"PROD002\",\n        \"name\": \"Bose QuietComfort 45 Headphones\",\n        \"category\": \"Electronics\",\n        \"brand\": \"Bose\",\n        \"price\": 10199,\n        \"rating\": 4.7,\n        \"features\": [\"Active Noise Cancellation\", \"24-hour battery\", \"Bluetooth 5.1\", \"USB-C charging\"],\n        \"description\": \"Premium wireless noise-cancelling headphones with legendary Bose sound quality.\",\n        \"in_stock\": True,\n        \"colors\": [\"Black\", \"White Smoke\"],\n    },\n    {\n        \"id\": \"PROD003\",\n        \"name\": \"Sony WH-1000XM5 Headphones\",\n        \"category\": \"Electronics\",\n        \"brand\": \"Sony\",\n        \"price\": 12999,\n        \"rating\": 4.9,\n        \"features\": [\"Industry-leading ANC\", \"30-hour battery\", \"Speak-to-Chat\", \"LDAC Hi-Res Audio\"],\n        \"description\": \"Sony's flagship noise-cancelling headphones with exceptional sound quality.\",\n        \"in_stock\": True,\n        \"colors\": [\"Black\", \"Silver\"],\n    },\n    {\n        \"id\": \"PROD004\",\n        \"name\": \"Usha Maxx Air 400mm Table Fan\",\n        \"category\": \"Home Appliances\",\n        \"brand\": \"Usha\",\n        \"price\": 2700,\n        \"rating\": 4.3,\n        \"features\": [\"400mm sweep\", \"3-speed control\", \"Oscillation\", \"Low power consumption\"],\n        \"description\": \"Powerful table fan with superior air delivery and energy efficiency.\",\n        \"in_stock\": True,\n        \"colors\": [\"White\", \"Blue\"],\n    },\n    {\n        \"id\": \"PROD005\",\n        \"name\": \"iPhone 15 Pro Max\",\n        \"category\": \"Electronics\",\n        \"brand\": \"Apple\",\n        \"price\": 159900,\n        \"rating\": 4.8,\n        \"features\": [\"A17 Pro chip\", \"Titanium design\", \"48MP camera\", \"USB-C\", \"5x optical zoom\"],\n        \"description\": \"Apple's most advanced iPhone with titanium design and professional camera.\",\n        \"in_stock\": True,\n        \"colors\": [\"Natural Titanium\", \"Blue Titanium\", \"Black Titanium\"],\n    },\n    {\n        \"id\": \"PROD006\",\n        \"name\": \"Samsung Galaxy S24 Ultra\",\n        \"category\": \"Electronics\",\n        \"brand\": \"Samsung\",\n        \"price\": 134999,\n        \"rating\": 4.7,\n        \"features\": [\"Snapdragon 8 Gen 3\", \"200MP camera\", \"S Pen included\", \"Galaxy AI\"],\n        \"description\": \"Samsung's flagship smartphone with Galaxy AI and an exceptional camera system.\",\n        \"in_stock\": True,\n        \"colors\": [\"Titanium Gray\", \"Titanium Black\", \"Titanium Violet\"],\n    },\n    {\n        \"id\": \"PROD007\",\n        \"name\": \"MacBook Air M3 13-inch\",\n        \"category\": \"Electronics\",\n        \"brand\": \"Apple\",\n        \"price\": 114900,\n        \"rating\": 4.9,\n        \"features\": [\"M3 chip\", \"18-hour battery\", \"Liquid Retina display\", \"MagSafe charging\"],\n        \"description\": \"Supercharged by M3 chip with all-day battery life and a stunning display.\",\n        \"in_stock\": True,\n        \"colors\": [\"Midnight\", \"Starlight\", \"Space Gray\", \"Silver\"],\n    },\n    {\n        \"id\": \"PROD008\",\n        \"name\": \"boAt Airdopes 141 TWS\",\n        \"category\": \"Electronics\",\n        \"brand\": \"boAt\",\n        \"price\": 1299,\n        \"rating\": 4.2,\n        \"features\": [\"42-hour playback\", \"ENx Technology\", \"IPX4 water resistance\", \"BEAST Mode\"],\n        \"description\": \"True wireless earbuds with massive battery life and immersive sound.\",\n        \"in_stock\": True,\n        \"colors\": [\"Active Black\", \"Bold Blue\", \"Cherry Blossom\"],\n    },\n]\n\n\n# ── Order Database ───────────────────────────────────────────\nORDER_DATABASE: dict[str, dict] = {\n    \"ORD101\": {\n        \"product\": \"Air Jordan 1 Retro High OG\",\n        \"customer_name\": \"Rahul Sharma\",\n        \"customer_email\": \"rahul.sharma@example.com\",\n        \"status\": \"Shipped\",\n        \"price\": 8999,\n        \"order_date\": \"2026-02-10\",\n        \"estimated_delivery\": \"2026-02-13\",\n    },\n    \"ORD102\": {\n        \"product\": \"Bose QuietComfort 45 Headphones\",\n        \"customer_name\": \"Priya Patel\",\n        \"customer_email\": \"priya.patel@example.com\",\n        \"status\": \"Delayed\",\n        \"delay_reason\": \"Bad weather conditions in transit region\",\n        \"price\": 10199,\n        \"order_date\": \"2026-02-08\",\n        \"estimated_delivery\": \"2026-02-15\",\n    },\n    \"ORD103\": {\n        \"product\": \"Usha Maxx Air 400mm Table Fan\",\n        \"customer_name\": \"Amit Kumar\",\n        \"customer_email\": \"amit.kumar@example.com\",\n        \"status\": \"Processing\",\n        \"price\": 2700,\n        \"order_date\": \"2026-02-12\",\n        \"estimated_delivery\": \"2026-02-20\",\n    },\n    \"ORD104\": {\n        \"product\": \"iPhone 15 Pro Max\",\n        \"customer_name\": \"Vikram Singh\",\n        \"customer_email\": \"vikram.singh@example.com\",\n        \"status\": \"Ordered\",\n        \"price\": 159900,\n        \"order_date\": \"2026-02-13\",\n        \"estimated_delivery\": \"2026-02-17\",\n    },\n}\n\n# Mutable queue — filled at runtime by escalate_to_human tool\nESCALATION_QUEUE: list[dict] = []\n\n\n# ── Support Policies (injected into Support Agent prompt) ──────\nSUPPORT_POLICIES = \"\"\"\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\"\"\".strip()\n",
+"src/main.py": "\"\"\"\nAxiomCart Multi-Agent Voice System — main entry point.\n\nUsage:\n    uv run python -m src.main                # interactive text mode (default)\n    uv run python -m src.main --voice        # interactive voice mode (needs mic)\n    uv run python -m src.main --query \"...\"  # single text query\n\"\"\"\n\nfrom __future__ import annotations # for newer type hint syntax on older Python version (<3.10+)\n\nimport argparse\nimport uuid\n\nfrom langgraph.types import Command\n\nfrom langchain_core.messages import HumanMessage\n\nfrom src.config import get_logger\nfrom src.graph import axiomcart_graph\nfrom src.voice import VoiceRecorder, VoiceSpeaker\n\nlogger = get_logger(\"main\")\n\n\nclass AxiomCartAssistant:\n    \"\"\"Wraps the LangGraph multi-agent pipeline with optional voice I/O.\n\n    A single thread_id is used for the entire session so the\n    checkpointer carries conversation history across turns.\n    \"\"\"\n\n    def __init__(self, voice: str = \"nova\", enable_voice: bool = False):\n        self.enable_voice = enable_voice\n        self.thread_id = uuid.uuid4().hex  # single thread per session\n\n        if enable_voice:\n            self.recorder = VoiceRecorder()\n            self.speaker  = VoiceSpeaker(voice=voice, speed=1.1)\n        else:\n            self.recorder = None\n            self.speaker  = None\n\n        logger.info(\"Assistant ready  (voice=%s)\", enable_voice)\n\n    # ── core query ────────────────────────────────────────\n    # ── core query (handles HITL interrupt/resume) ───────\n    def query(self, text: str, input_fn=None) -> str:\n        \"\"\"Send a text query through the multi-agent graph.\n\n        If the graph pauses for HITL (support agent needs order ID),\n        this method collects user input and resumes the graph.\n        \"\"\"\n        if input_fn is None:\n            input_fn = lambda prompt: input(f\"\\n🔄 Agent asks: {prompt}\\nYou: \").strip()\n\n        config = {\"configurable\": {\"thread_id\": self.thread_id}}\n\n        result = axiomcart_graph.invoke(\n            {\"messages\": [HumanMessage(content=text)], \"user_query\": text},\n            config,\n        )\n\n        # Handle HITL: interrupt() surfaces questions in __interrupt__\n        while \"__interrupt__\" in result and result[\"__interrupt__\"]:\n            question = result[\"__interrupt__\"][0].value\n            logger.info(\"HITL interrupt: %r\", question)\n\n            if self.enable_voice and self.speaker and self.recorder:\n                self.speaker.speak(question)\n                _, user_answer = self.recorder.record_and_transcribe(duration=5)\n                if not user_answer:\n                    user_answer = \"I don't have that information\"\n            else:\n                user_answer = input_fn(question)\n\n            logger.info(\"HITL resume: user_answer=%r\", user_answer)\n            result = axiomcart_graph.invoke(Command(resume=user_answer), config)\n\n        answer = result.get(\"final_answer\", \"\")\n        if not answer:\n            answer = \"Sorry, I wasn't able to process that. Could you try rephrasing?\"\n        return answer\n\n    # ── interactive loops ────────────────────────────────\n    def text_loop(self) -> None:\n        \"\"\"REPL-style text interaction.\"\"\"\n        print(\"\\n🛒  AxiomCart Assistant  (type 'quit' to exit)\\n\")\n        while True:\n            try:\n                user_input = input(\"You: \").strip()\n            except (EOFError, KeyboardInterrupt):\n                break\n            if not user_input or user_input.lower() in (\"quit\", \"exit\", \"bye\"):\n                print(\"Goodbye!\")\n                break\n            answer = self.query(user_input)\n            print(f\"\\nAssistant: {answer}\\n\")\n\n    def voice_loop(self, max_turns: int = 10) -> None:\n        \"\"\"Microphone-based conversation loop.\"\"\"\n        if not self.recorder or not self.speaker:\n            logger.error(\"Voice components not initialised\")\n            return\n\n        welcome = \"Hello! I'm your AxiomCart assistant. How can I help you today?\"\n        self.speaker.speak(welcome)\n\n        for turn in range(1, max_turns + 1):\n            logger.info(\"--- voice turn %d / %d ---\", turn, max_turns)\n            _, transcript = self.recorder.record_and_transcribe(duration=5)\n            if not transcript:\n                self.speaker.speak(\"I didn't catch that. Could you repeat?\")\n                continue\n            if transcript.lower().strip() in (\"goodbye\", \"bye\", \"quit\", \"exit\", \"thank you\"):\n                self.speaker.speak(\"Goodbye! Have a great day.\")\n                break\n            print(f\"\\nYou: {transcript}\")\n            answer = self.query(transcript)\n            print(f\"Assistant: {answer}\\n\")\n            self.speaker.speak(answer)\n\n\n# ── CLI ──────────────────────────────────────────────────────\n\ndef main() -> None:\n    parser = argparse.ArgumentParser(description=\"AxiomCart Multi-Agent Voice System\")\n    parser.add_argument(\"--voice\", action=\"store_true\", help=\"Use microphone input + TTS output\")\n    parser.add_argument(\"--query\", type=str, help=\"Run a single text query and exit\")\n    args = parser.parse_args()\n\n    assistant = AxiomCartAssistant(enable_voice=args.voice)\n\n    if args.query:\n        print(assistant.query(args.query))\n    elif args.voice:\n        assistant.voice_loop()\n    else:\n        assistant.text_loop()\n\n\nif __name__ == \"__main__\":\n    main()\n",
+"src/rag.py": "\"\"\"\nRAG: Build a ChromaDB vector store from the product catalog.\n\nThe vector store is created once at import time and re-used by the\nsearch_product_catalog tool.\n\"\"\"\n\nfrom langchain_chroma import Chroma\nfrom langchain_core.documents import Document\n\nfrom src.config import embeddings, get_logger\nfrom src.data import PRODUCT_CATALOG\n\nlogger = get_logger(\"rag\")\n\n\ndef _build_documents() -> list[Document]:\n    \"\"\"Convert every catalog entry into a LangChain Document.\"\"\"\n    docs: list[Document] = []\n    for p in PRODUCT_CATALOG:\n        content = (\n            f\"Product: {p['name']}\\n\"\n            f\"Brand: {p['brand']}\\n\"\n            f\"Category: {p['category']}\\n\"\n            f\"Price: ₹{p['price']}\\n\"\n            f\"Rating: {p['rating']}/5\\n\"\n            f\"Features: {', '.join(p['features'])}\\n\"\n            f\"Description: {p['description']}\\n\"\n            f\"Colors: {', '.join(p['colors'])}\\n\"\n            f\"In Stock: {'Yes' if p['in_stock'] else 'No'}\"\n        )\n        docs.append(\n            Document(\n                page_content=content,\n                metadata={\n                    \"id\": p[\"id\"],\n                    \"name\": p[\"name\"],\n                    \"brand\": p[\"brand\"],\n                    \"category\": p[\"category\"],\n                    \"price\": p[\"price\"],\n                    \"rating\": p[\"rating\"],\n                },\n            )\n        )\n    return docs\n\n\ndef build_vectorstore() -> Chroma:\n    \"\"\"Create an in-memory ChromaDB collection from the product catalog.\"\"\"\n    docs = _build_documents()\n    store = Chroma.from_documents(\n        documents=docs,\n        embedding=embeddings,\n        collection_name=\"axiomcart_products\",\n    )\n    logger.info(\"Vector store ready  (%d products indexed)\", len(docs))\n    return store\n\n\n# Module-level singleton so every importer shares the same store\nproduct_vectorstore = build_vectorstore()\n",
+"src/config.py": "\"\"\"\nConfiguration: Logger, API clients, and settings.\n\nThis module is imported by everything else, so it must have zero\ndependencies on other project modules.\n\"\"\"\n\nimport logging\nimport os\nimport sys\n\nfrom dotenv import load_dotenv\nfrom langchain_openai import ChatOpenAI, OpenAIEmbeddings\nfrom openai import OpenAI\n\n# ── Load .env ────────────────────────────────────────────────\nload_dotenv()\n\n# ── Logger ───────────────────────────────────────────────────\ndef get_logger(name: str) -> logging.Logger:\n    \"\"\"Create a module-level logger with a readable format.\"\"\"\n    logger = logging.getLogger(name)\n    if not logger.handlers:\n        handler = logging.StreamHandler(sys.stdout)\n        handler.setFormatter(\n            logging.Formatter(\"%(asctime)s | %(name)-18s | %(levelname)-7s | %(message)s\",\n                              datefmt=\"%H:%M:%S\")\n        )\n        logger.addHandler(handler)\n    logger.setLevel(logging.INFO)\n    return logger\n\nlogger = get_logger(\"config\")\n\n# ── Validate API key ────────────────────────────────────────\nOPENAI_API_KEY = os.environ.get(\"OPENAI_API_KEY\", \"\")\nif not OPENAI_API_KEY or OPENAI_API_KEY.startswith(\"sk-your\"):\n    logger.error(\"OPENAI_API_KEY is missing. Copy .env.example → .env and add your key.\")\n    sys.exit(1)\n\n# ── Clients ──────────────────────────────────────────────────\nopenai_client = OpenAI(api_key=OPENAI_API_KEY)\nllm = ChatOpenAI(model=\"gpt-4o\", temperature=0.3)\nembeddings = OpenAIEmbeddings(model=\"text-embedding-3-small\")\n\nlogger.info(\"OpenAI clients initialised  (model: gpt-4o, embeddings: text-embedding-3-small)\")\n"
+}/*__END_FILES__*/;
+
+/* ── The rendered code block: one entry per line of the README diagram.
+      f = file, r = 1-based [start,end] ranges to highlight, n = why it matters. ── */
+const STEPS = [
+{t:`1. START`, f:'src/graph.py', r:[[28,38]],
+ n:`The whole run begins at the START edge. build_graph() registers the four nodes and wires START → orchestrator; every query enters here.`},
+
+{t:`   └─▶ orchestrator_node`, f:'src/nodes.py', r:[[225,231]],
+ n:`Node 1. It pulls the user's text off the graph state (falling back to the last message) and returns a Command that both updates state and picks the next node(s).`},
+
+{t:`        • LLM classifies the query → two tasks:`, f:'src/nodes.py', r:[[233,262]],
+ n:`The routing prompt plus llm.with_structured_output(ClassificationResult) — the LLM must answer in the schema, so routing is parsed data, not free text. A failure falls back to an empty task list.`,
+ also:[{label:'state.py: ClassificationResult', f:'src/state.py', r:[[37,44]], n:`The Pydantic schema the classifier is forced into: a list of tasks, the synthesis flag, and its reasoning.`}]},
+
+{t:`            - support_agent: "check order status for delay"`, f:'src/nodes.py', r:[[239,239],[244,247]],
+ n:`The prompt lines that produce this task: support_agent owns orders, complaints, and escalation — and the guardrail says only route here when the query clearly involves one.`,
+ also:[{label:'state.py: AgentTask', f:'src/state.py', r:[[26,34]], n:`Each task is an AgentTask: which agent handles it, and what that agent should do.`}]},
+
+{t:`            - product_agent: "search headphones"`, f:'src/nodes.py', r:[[237,238],[241,243]],
+ n:`The prompt lines that produce this task: product_agent owns catalog search and recommendations — and also general chitchat, which is why it's the default when in doubt.`},
+
+{t:`        • Sets requires_synthesis = true`, f:'src/state.py', r:[[37,44]],
+ n:`requires_synthesis is a field on the classifier's schema. Rule 4 of the orchestrator prompt sets it for mixed queries, marking that two agent replies will need merging.`,
+ also:[{label:'nodes.py: prompt rule 4', f:'src/nodes.py', r:[[240,245]], n:`Rule 4: mixed queries → BOTH agents, requires_synthesis = true.`}]},
+
+{t:`        • Dispatches via Send() to BOTH agents in parallel`, f:'src/nodes.py', r:[[264,283]],
+ n:`One Send() per classified task, each carrying its own payload. Returning a list of Sends in Command.goto is what fans out — LangGraph runs both agents in the same superstep. Note agent_results is reset to [] so stale results from a prior turn don't leak in.`},
+
+{t:``},
+
+{t:`2. PARALLEL EXECUTION`, f:'src/graph.py', r:[[4,12],[30,34]],
+ n:`Both agents are ordinary nodes on the main graph — nothing about them is special. The parallelism comes entirely from the orchestrator dispatching two Sends at once.`,
+ also:[{label:'state.py: WorkerInput', f:'src/state.py', r:[[65,74]], n:`The flat payload each worker receives via Send() — deliberately free of nested Pydantic objects so serialisation stays predictable.`}]},
+
+{t:`   ┌─▶ product_agent`, f:'src/nodes.py', r:[[290,296]],
+ n:`Node 2. It reads its task_description out of the Send payload and rebuilds prior conversation turns as plain text via build_context().`,
+ also:[{label:'nodes.py: build_context', f:'src/nodes.py', r:[[206,218]], n:`Formats earlier Human/AI messages into a "CONVERSATION SO FAR:" block so the sub-agent has history without inheriting raw message objects.`}]},
+
+{t:`   │    • Injects PRODUCT_PROMPT as system message`, f:'src/nodes.py', r:[[47,66],[298,301]],
+ n:`The agent's persona and tool policy live in PRODUCT_PROMPT, prepended as a SystemMessage on every subgraph invocation, followed by a HumanMessage carrying context + task + raw query.`},
+
+{t:`   │    • Runs product_subgraph (model ⇄ tools loop):`, f:'src/nodes.py', r:[[113,118],[142,148]],
+ n:`The subgraph is four lines of wiring: START → model, a conditional edge out of model, and tools → model looping back. should_continue is the whole control flow — tool calls present means go to tools, otherwise END.`},
+
+{t:`   │        model → calls search_product_catalog("headphones")`, f:'src/nodes.py', r:[[100,101],[123,127]],
+ n:`bind_tools() gives the LLM the tool schemas; product_model just invokes it and appends the reply. The model doesn't run the tool — it emits a tool_call, and should_continue routes to the tools node.`},
+
+{t:`   │        tools → returns Bose QC45, Sony XM5, boAt Airdopes`, f:'src/tools.py', r:[[48,66]],
+ n:`The actual tool: a top-3 semantic search over the product vector store. The three headphone entries come back because the catalog is embedded and searched by meaning, not keyword.`,
+ also:[{label:'data.py: catalog entries', f:'src/data.py', r:[[24,47]], n:`The Bose QC45 and Sony XM5 records in the static catalog that the RAG search retrieves.`},
+       {label:'rag.py: vector store', f:'src/rag.py', r:[[1,61]], n:`Builds the in-memory vector store the tool searches.`}]},
+
+{t:`   │        model → formats a helpful product summary`, f:'src/nodes.py', r:[[130,139],[147,147]],
+ n:`The tools node wraps each result in a ToolMessage and appends it; the tools → model edge re-invokes the model, which now has the products in context, answers in prose with no tool calls, and so exits to END.`},
+
+{t:`   │    • Sends result to synthesizer`, f:'src/nodes.py', r:[[303,308]],
+ n:`The subgraph's last message becomes the agent's answer, written into agent_results tagged with its source, and the node hands control to the synthesizer.`},
+
+{t:`   │`},
+
+{t:`   └─▶ support_agent`, f:'src/nodes.py', r:[[315,326]],
+ n:`Node 3, structurally identical to product_agent — same payload, same context building. The difference is entirely in its prompt, its tools, and its interrupt-capable subgraph.`},
+
+{t:`        • Injects SUPPORT_PROMPT as system message`, f:'src/nodes.py', r:[[68,89],[328,331]],
+ n:`SUPPORT_PROMPT interpolates the support policies and, critically, instructs the model to ask for an order ID before calling any tool — that instruction is what triggers the HITL pause below.`},
+
+{t:`        • Runs support_subgraph (model ⇄ tools loop):`, f:'src/nodes.py', r:[[184,201]],
+ n:`Same shape as the product subgraph, but with a three-way router: a HumanMessage last (the user just answered) loops back to model, tool calls go to tools, anything else ends.`},
+
+{t:`            model → no tool calls (needs order ID) → interrupt()`, f:'src/nodes.py', r:[[153,169]],
+ n:`The key HITL moment. No tool calls and no tools called yet means the model is asking a question rather than answering — so interrupt() suspends the entire graph, handing the question up to the caller.`},
+
+{t:`            ← HITL: user is asked "Could you provide your order ID?"`, f:'src/main.py', r:[[59,75]],
+ n:`On the caller side, a suspended graph returns with __interrupt__ populated. The CLI prints the question (or speaks it in voice mode) and blocks on the user's answer.`},
+
+{t:`            → user responds "ORD102"`, f:'src/nodes.py', r:[[161,167],[187,189]],
+ n:`Command(resume=...) re-enters the graph and interrupt() returns the user's text. support_model appends it as a HumanMessage, and support_should_continue sees a HumanMessage last, so it loops straight back to the model.`,
+ also:[{label:'main.py: resume call', f:'src/main.py', r:[[77,78]], n:`The resume side: invoking the graph with Command(resume=user_answer) picks up exactly where interrupt() paused.`}]},
+
+{t:`            model → calls get_order_status("ORD102")`, f:'src/nodes.py', r:[[97,101],[172,181]],
+ n:`Now that it has the ID, the model emits a real tool call. The tools node dispatches by name against sales_tools_by_name and returns an "Unknown tool" string rather than raising if the name doesn't match.`},
+
+{t:`            tools → returns order details (Delayed, bad weather)`, f:'src/tools.py', r:[[73,107]],
+ n:`The lookup accepts an order ID or an email, normalises sloppy IDs like "ord-102", and formats the record — appending the delay reason only when the order actually has one.`,
+ also:[{label:'data.py: ORD102 record', f:'src/data.py', r:[[122,131]], n:`The source record: status "Delayed", delay_reason "Bad weather conditions in transit region", ETA 2026-02-15.`},
+       {label:'tools.py: ID normalisation', f:'src/tools.py', r:[[29,42]], n:`Accepts ORD101, ORD-101, ord-101 or bare 101, and can also resolve an order by customer email.`}]},
+
+{t:`            model → formats empathetic support response`, f:'src/nodes.py', r:[[85,88],[333,333]],
+ n:`Tone comes from the prompt guidelines, not from code. With the order details now in context the model answers directly, the loop exits, and the last message is taken as the agent's answer.`},
+
+{t:`        • Sends result to synthesizer`, f:'src/nodes.py', r:[[335,338]],
+ n:`Tagged "sales_support" and appended to agent_results — the same convergence point the product agent wrote to.`},
+
+{t:``},
+
+{t:`3. SYNTHESIZER`, f:'src/graph.py', r:[[34,38]],
+ n:`Both agents route here with goto="synthesizer", and the synthesizer is the only node wired to END — so it's the single exit for every path through the graph.`},
+
+{t:`   └─▶ synthesizer_node`, f:'src/nodes.py', r:[[345,358]],
+ n:`Node 4. It short-circuits on the common cases: no results returns an apology, and a single result is passed straight through with no extra LLM call. Only genuinely multi-agent turns pay for a merge.`},
+
+{t:`        • Receives 2 agent results`, f:'src/state.py', r:[[19,23],[58,59]],
+ n:`Two nodes writing to agent_results in the same superstep would normally collide. The reducer resolves it — concatenating updates, and treating an empty list as an explicit reset for the next turn.`},
+
+{t:`        • LLM merges them into one coherent reply:`, f:'src/nodes.py', r:[[360,372]],
+ n:`Each result is labelled with its source agent, and one final LLM call rewrites both into a single voice, with the original customer query included so nothing gets dropped.`},
+
+{t:`          "I'm sorry to hear your order ORD102 is delayed due to`, f:'src/nodes.py', r:[[363,369]],
+ n:`The merge prompt: address every part of the query, be concise, speak as "AxiomCart Assistant" — which is why the reply covers both the delay and the headphones in one voice.`},
+
+{t:`           weather — the new ETA is Feb 15. In the meantime, here`, f:'src/nodes.py', r:[[363,369]],
+ n:`The merge prompt: address every part of the query, be concise, speak as "AxiomCart Assistant" — which is why the reply covers both the delay and the headphones in one voice.`},
+
+{t:`           are some great headphone options: ..."`, f:'src/nodes.py', r:[[363,369]],
+ n:`The merge prompt: address every part of the query, be concise, speak as "AxiomCart Assistant" — which is why the reply covers both the delay and the headphones in one voice.`},
+
+{t:``},
+
+{t:`4. END`, f:'src/graph.py', r:[[38,38],[40,48]],
+ n:`synthesizer → END closes the graph. Compiling with a MemorySaver checkpointer is what lets an interrupt pause mid-run and lets conversation history carry across turns.`},
+
+{t:`   └─▶ final_answer returned to the user`, f:'src/main.py', r:[[80,83]],
+ n:`The caller reads final_answer off the returned state, with a fallback if the graph produced nothing. In voice mode this string is what gets spoken back.`,
+ also:[{label:'state.py: final_answer', f:'src/state.py', r:[[47,62]], n:`final_answer is the last field of the top-level state that flows through every node.`},
+       {label:'main.py: session thread', f:'src/main.py', r:[[33,44]], n:`One thread_id per session — the checkpointer key that makes multi-turn memory and HITL resume work.`}]},
+];
+
+/* ── Python highlighting ──────────────────────────────────── */
+const KW = new Set(['False','None','True','and','as','assert','async','await','break','class','continue','def','del','elif','else','except','finally','for','from','global','if','import','in','is','lambda','nonlocal','not','or','pass','raise','return','try','while','with','yield','match','case']);
+const BI = new Set(['self','cls','str','int','bool','dict','list','float','len','print','any','all','isinstance','hasattr','Exception','enumerate','range','super']);
+
+function tokenize(src){
+  const out=[]; const n=src.length; let i=0;
+  const isId = c => /[A-Za-z0-9_]/.test(c);
+  while(i<n){
+    const c = src[i];
+    if(c==='#'){ let j=src.indexOf('\n',i); if(j<0) j=n; out.push(['com',src.slice(i,j)]); i=j; continue; }
+    const sm = /^([rRbBuUfF]{0,2})("""|'''|"|')/.exec(src.substr(i,5));
+    if(sm){
+      const q = sm[2]; let j = i + sm[1].length + q.length; let closed=false;
+      while(j<n){
+        if(src[j]==='\\'){ j+=2; continue; }
+        if(src.startsWith(q,j)){ j+=q.length; closed=true; break; }
+        if(q.length===1 && src[j]==='\n') break;
+        j++;
+      }
+      if(!closed && q.length===1 && j<n && src[j]==='\n'){ /* unterminated: stop at EOL */ }
+      out.push(['str', src.slice(i, Math.min(j,n))]); i=Math.min(j,n); continue;
+    }
+    if(/[0-9]/.test(c)){ let j=i; while(j<n && /[0-9_a-fA-FxX.]/.test(src[j])) j++; out.push(['num',src.slice(i,j)]); i=j; continue; }
+    if(c==='@' && isId(src[i+1]||'')){ let j=i+1; while(j<n && isId(src[j])) j++; out.push(['dec',src.slice(i,j)]); i=j; continue; }
+    if(/[A-Za-z_]/.test(c)){ let j=i; while(j<n && isId(src[j])) j++; out.push(['id',src.slice(i,j)]); i=j; continue; }
+    let j=i; while(j<n && !/[#A-Za-z0-9_@'"]/.test(src[j])) j++;
+    if(j===i) j=i+1;
+    out.push(['', src.slice(i,j)]); i=j;
+  }
+  // second pass: def/class names, call sites, keywords
+  const sig = k => { for(let x=k; x>=0; x--){ if(out[x][1].trim()!=='') return out[x]; } return null; };
+  const nextSig = k => { for(let x=k; x<out.length; x++){ if(out[x][1].trim()!=='') return out[x]; } return null; };
+  for(let k=0;k<out.length;k++){
+    if(out[k][0]!=='id') continue;
+    const w = out[k][1];
+    const prev = sig(k-1), next = nextSig(k+1);
+    if(prev && prev[0]==='kw' && prev[1]==='def'){ out[k][0]='fn'; continue; }
+    if(prev && prev[0]==='kw' && prev[1]==='class'){ out[k][0]='cls'; continue; }
+    if(KW.has(w)){ out[k][0]='kw'; continue; }
+    if(BI.has(w)){ out[k][0]='bi'; continue; }
+    if(next && next[1][0]==='('){ out[k][0]='fn'; continue; }
+    out[k][0]='';
+  }
+  return out;
+}
+
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const cache = new Map();
+function highlight(path){
+  if(cache.has(path)) return cache.get(path);
+  const toks = tokenize(FILES[path] ?? '');
+  const lines = [[]];
+  for(const [type, text] of toks){
+    const parts = text.split('\n');
+    parts.forEach((p, idx) => {
+      if(idx > 0) lines.push([]);
+      if(p) lines[lines.length-1].push(type ? `<span class="${type}">${esc(p)}</span>` : esc(p));
+    });
+  }
+  const html = lines.map(a => a.join(''));
+  cache.set(path, html);
+  return html;
+}
+
+/* ── Shared code pane ─────────────────────────────────────── */
+const codepane = document.getElementById('codepane');
+
+function closeCode(){
+  codepane.hidden = true;
+  block.querySelectorAll('.dl.on').forEach(e => e.classList.remove('on'));
+  current = -1;
+}
+document.getElementById('codeclose').onclick = closeCode;
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && !codepane.hidden) closeCode();
+});
+
+/* refs = [primary, ...also]; k = which one to display */
+function showRefs(refs, k){
+  const ref = refs[k];
+  const path = ref.f, ranges = ref.r;
+  const lines = highlight(path);
+  const inRange = ln => ranges.some(([a,b]) => ln >= a && ln <= b);
+
+  document.getElementById('fname').textContent = path;
+  document.getElementById('flines').textContent =
+    ranges.map(([a,b]) => a === b ? `L${a}` : `L${a}–${b}`).join(', ');
+  document.getElementById('fnote').textContent = ref.n || '';
+
+  const alsoEl = document.getElementById('falso');
+  alsoEl.textContent = '';
+  if(refs.length > 1){
+    refs.forEach((r, j) => {
+      const b = document.createElement('button');
+      b.textContent = r.label || `${r.f.replace('src/','')}:${r.r[0][0]}`;
+      if(j === k) b.className = 'act';
+      else b.onclick = () => showRefs(refs, j);
+      alsoEl.appendChild(b);
+    });
+  }
+
+  let html = '';
+  for(let i = 0; i < lines.length; i++){
+    const ln = i + 1;
+    if(ln === lines.length && lines[i] === '') break; // trailing newline
+    html += `<div class="row${inRange(ln) ? ' hl' : ''}" id="L${ln}"><span class="ln">${ln}</span><span class="lc">${lines[i] || ' '}</span></div>`;
+  }
+  document.getElementById('code').innerHTML = html;
+
+  codepane.hidden = false;
+
+  // rect delta rather than offsetTop: the pane is not the offset parent
+  const first = document.getElementById('L' + ranges[0][0]);
+  if(first){
+    const delta = first.getBoundingClientRect().top - codepane.getBoundingClientRect().top;
+    codepane.scrollTop = Math.max(0, codepane.scrollTop + delta - codepane.clientHeight * 0.28);
+  }
+}
+
+/* ── Left pane ────────────────────────────────────────────── */
+const block = document.getElementById('block');
+let current = -1;
+
+STEPS.forEach((s, i) => {
+  const el = document.createElement('div');
+  el.className = 'dl' + (s.f ? ' link' : ' inert');
+  el.dataset.i = i;
+
+  const txt = document.createElement('span');
+  txt.className = 'txt';
+  txt.textContent = s.t || ' ';
+  el.appendChild(txt);
+
+  if(s.f){
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = `${s.f.replace('src/','')}:${s.r[0][0]}`;
+    el.appendChild(tag);
+    el.onclick = () => select(i);
+  }
+  block.appendChild(el);
+});
+
+function select(i){
+  const s = STEPS[i];
+  if(!s || !s.f) return;
+  block.querySelectorAll('.dl.on').forEach(e => e.classList.remove('on'));
+  block.querySelector(`.dl[data-i="${i}"]`).classList.add('on');
+  current = i;
+  const primary = {label:`${s.f.replace('src/','')}:${s.r[0][0]}`, f:s.f, r:s.r, n:s.n};
+  showRefs([primary, ...(s.also || [])], 0);
+}
+
+document.addEventListener('keydown', e => {
+  if(view !== 'exec') return;
+  if(e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  const step = e.key === 'ArrowDown' ? 1 : -1;
+  let i = current;
+  for(let k = 0; k < STEPS.length; k++){
+    i += step;
+    if(i < 0 || i >= STEPS.length) return;
+    if(STEPS[i].f){
+      e.preventDefault();
+      select(i);
+      block.querySelector(`.dl[data-i="${i}"]`).scrollIntoView({block:'nearest'});
+      return;
+    }
+  }
+});
+
+/* ── Demo Data view ───────────────────────────────────────── */
+const money = v => '₹' + v.toLocaleString('en-IN');
+
+/* Mirrors rag.py _build_documents() — the text that actually gets embedded. */
+function ragDoc(p){
+  return `Product: ${p.name}\nBrand: ${p.brand}\nCategory: ${p.category}\n`
+       + `Price: ₹${p.price}\nRating: ${p.rating}/5\nFeatures: ${p.features.join(', ')}\n`
+       + `Description: ${p.description}\nColors: ${p.colors.join(', ')}\n`
+       + `In Stock: ${p.in_stock ? 'Yes' : 'No'}`;
+}
+
+const SRC = {
+  catalog:  {f:'src/data.py', r:[[11,108]],  n:`PRODUCT_CATALOG — eight hand-written product dicts. rag.py turns each one into a Document and embeds it at import time, so this list is the entire universe the product agent can search.`},
+  orders:   {f:'src/data.py', r:[[112,150]], n:`ORDER_DATABASE — four orders keyed by ID. get_order_status() looks up this dict directly, by ID or by customer email.`},
+  queue:    {f:'src/data.py', r:[[152,153]], n:`ESCALATION_QUEUE — an empty module-level list that escalate_to_human() appends tickets to. It lives in memory only.`},
+  policies: {f:'src/data.py', r:[[156,168]], n:`SUPPORT_POLICIES — interpolated verbatim into SUPPORT_PROMPT, so the support agent quotes these shipping options and escalation rules.`},
+  ragdoc:   {f:'src/rag.py',  r:[[17,45]],   n:`_build_documents() composes the text that gets embedded for each product — this is what semantic search actually matches against.`},
+  ticket:   {f:'src/tools.py', r:[[110,151]], n:`escalate_to_human() builds the ticket: a random ESC- id, a timestamp, and the customer details pulled from the order record.`},
+};
+
+const ASKS = [
+  {q:`My order is delayed and I want to see some headphones`,
+   why:`The README's worked example — the only prompt here that fans out to both agents and then gets merged by the synthesizer.`, route:`orchestrator → both agents → synthesizer`},
+  {q:`Show me some headphones`,
+   why:`Pure catalog search. RAG returns the three closest matches: Bose QC45, Sony WH-1000XM5, and the boAt Airdopes.`, route:`product_agent → search_product_catalog`},
+  {q:`Where is my order ORD102?`,
+   why:`Order ID supplied up front, so the agent skips the HITL question and looks it up straight away — comes back Delayed, bad weather.`, route:`support_agent → get_order_status`},
+  {q:`My order is late`,
+   why:`No order ID, so the support agent interrupts and asks for one. Answer with ORD102 (or any ID above) to resume the paused graph.`, route:`support_agent → interrupt() → HITL`},
+  {q:`What's the status for priya.patel@example.com?`,
+   why:`Exercises the email branch of the lookup, which scans the order database for a matching customer_email.`, route:`support_agent → get_order_status`},
+  {q:`I want to talk to a human about ORD103`,
+   why:`Triggers an escalation ticket. Customer name and email are pulled from the order record, and the ticket lands in the in-memory queue.`, route:`support_agent → escalate_to_human`},
+  {q:`Do you sell running shoes?`,
+   why:`Nothing in the catalog matches, so the prompt's honesty rule applies — the agent should say so rather than pitch the Air Jordans.`, route:`product_agent → search_product_catalog`},
+  {q:`Hi there`,
+   why:`Greetings and chitchat route to the product agent, which answers without calling any tool.`, route:`product_agent (no tools)`},
+];
+
+function srcChip(key){
+  return `<button class="srcbtn" data-src="${key}">${SRC[key].f.replace('src/','')}:${SRC[key].r[0][0]}</button>`;
+}
+
+function renderData(){
+  const products = DATA.PRODUCT_CATALOG || [];
+  const orders = Object.entries(DATA.ORDER_DATABASE || {});
+  const delayed = orders.filter(([,o]) => o.status === 'Delayed').length;
+
+  const cards = products.map(p => `
+    <div class="card">
+      <div class="pid">${p.id}</div>
+      <h3>${esc(p.name)}</h3>
+      <div class="row-pills">
+        <span class="pill price">${money(p.price)}</span>
+        <span class="pill">${esc(p.brand)}</span>
+        <span class="pill">${esc(p.category)}</span>
+        <span class="pill">★ ${p.rating}</span>
+        <span class="pill ${p.in_stock ? 'stock' : 'oos'}">${p.in_stock ? 'In stock' : 'Out of stock'}</span>
+      </div>
+      <p class="desc">${esc(p.description)}</p>
+      <ul>${p.features.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+      <div class="colors">Colors: ${p.colors.map(esc).join(' · ')}</div>
+      <details><summary>What gets embedded for search</summary><pre>${esc(ragDoc(p))}</pre></details>
+    </div>`).join('');
+
+  const rows = orders.map(([id, o]) => `
+    <tr class="${o.delay_reason ? 'delay' : ''}">
+      <td class="mono">${id}</td>
+      <td>${esc(o.product)}</td>
+      <td>${esc(o.customer_name)}<span class="email">${esc(o.customer_email)}</span></td>
+      <td><span class="st ${o.status.toLowerCase()}">${o.status}</span></td>
+      <td class="amt">${money(o.price)}</td>
+      <td class="mono">${o.order_date}</td>
+      <td class="mono">${o.estimated_delivery}</td>
+    </tr>
+    ${o.delay_reason ? `<tr><td></td><td colspan="6"><span class="why-delay">Delay: ${esc(o.delay_reason)}</span></td></tr>` : ''}`).join('');
+
+  document.getElementById('dataroot').innerHTML = `
+    <h1>Demo Data</h1>
+    <p class="intro">Everything the assistant knows is hard-coded in <code>src/data.py</code> — no database, no network. This is the exact catalog, order book, and policy text you get when you follow the README and run <code>uv run python -m src.main</code>.</p>
+    <p class="intro">It is all in-memory: the catalog is embedded into a fresh vector store on every import, order records are never written to, and any escalation tickets vanish when the process exits.</p>
+
+    <div class="sec">
+      <h2>Product catalog ${srcChip('catalog')}<span class="count">${products.length} products · what the product agent can search</span></h2>
+      <p class="sub">The product agent has exactly one tool, and it searches these eight entries semantically — not by keyword. Expand a card to see the text that actually gets embedded ${srcChip('ragdoc')}.</p>
+      <div class="cards">${cards}</div>
+    </div>
+
+    <div class="sec">
+      <h2>Order database ${srcChip('orders')}<span class="count">${orders.length} orders · ${delayed} delayed</span></h2>
+      <p class="sub">Look an order up by ID or by customer email. IDs are forgiving — <code>ORD102</code>, <code>ORD-102</code>, <code>ord-102</code> and bare <code>102</code> all resolve to the same record.</p>
+      <table class="tbl">
+        <thead><tr><th>Order</th><th>Product</th><th>Customer</th><th>Status</th><th class="amt">Price</th><th>Ordered</th><th>ETA</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+
+    <div class="sec">
+      <h2>Support policies ${srcChip('policies')}<span class="count">injected into the support agent's prompt</span></h2>
+      <p class="sub">This block is interpolated straight into SUPPORT_PROMPT, which is why the support agent can quote shipping prices it was never given a tool for.</p>
+      <pre class="policy">${esc(DATA.SUPPORT_POLICIES || '')}</pre>
+    </div>
+
+    <div class="sec">
+      <h2>Escalation queue ${srcChip('queue')}<span class="count">empty at startup</span></h2>
+      <p class="sub">Starts as an empty list and fills up at runtime whenever <code>escalate_to_human</code> fires ${srcChip('ticket')}.</p>
+      <div class="box">
+        <b>No tickets yet.</b> Each escalation appends one record:
+        <ul>
+          <li><code>ticket_id</code> — random, e.g. <code>ESC-48213</code></li>
+          <li><code>timestamp</code>, <code>order_id</code>, <code>issue_summary</code>, <code>status: "open"</code></li>
+          <li><code>customer_name</code> / <code>customer_email</code> — pulled from the order, or <code>"Unknown"</code> if the ID doesn't match</li>
+          <li><code>priority</code> — urgent (1h), high (4h), normal (24h), low (48h)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Things to try<span class="count">prompts that exercise this data</span></h2>
+      <p class="sub">Each of these hits a different path through the graph. Step through that path on the Graph Execution tab.</p>
+      <div class="asks">
+        ${ASKS.map(a => `<div class="ask"><q>${esc(a.q)}</q><span class="why">${esc(a.why)}</span><span class="route">${esc(a.route)}</span></div>`).join('')}
+      </div>
+    </div>`;
+
+  document.getElementById('dataroot').querySelectorAll('.srcbtn').forEach(b => {
+    b.onclick = () => openSource(SRC[b.dataset.src]);
+  });
+}
+
+/* Open the code pane beside whatever tab is showing — no tab switch. */
+function openSource(ref){
+  block.querySelectorAll('.dl.on').forEach(e => e.classList.remove('on'));
+  current = -1;
+  showRefs([{label: `${ref.f.replace('src/','')}:${ref.r[0][0]}`, ...ref}], 0);
+}
+
+/* ══ Prompt Trace — one real captured run ════════════════════
+   Everything here comes from src/trace_capture.py output: the exact
+   messages that went over the wire, per-call timings and token counts.
+   One sub-tab per graph execution (one turn of the conversation). ── */
+
+const CAPTURE_CMD = `uv run python -m src.trace_capture --interactive
+# you drive: type each query, answer the agent, 'quit' to write the file
+
+python tools/build_page.py --capture trace-2.json
+# bake a capture into this page`;
+
+let capture = /*__CAPTURE__*/{"meta": {"query": "Hi! Do you have any wireless headphones?", "answer": "Hello! I'm sorry to hear that your order ORD102 is delayed. Here's the current status:\n\n- **Product**: Bose QuietComfort 45 Headphones\n- **Price**: ₹10,199\n- **Status**: Delayed due to bad weather conditions in the transit region\n- **Ordered on**: February 8, 2026\n- **Estimated Arrival**: February 15, 2026\n\nFor alternatives to the Bose QuietComfort 45 Headphones, you might consider:\n\n1. **Sony WH-1000XM4** - Excellent noise cancellation and sound quality.\n2. **Sennheiser Momentum 3 Wireless** - Great sound with a stylish design.\n3. **Apple AirPods Max** - Premium experience, especially for Apple users.\n\nAdditionally, if your original interest was in the boAt Airdopes 141 TWS, here are some other options:\n\n1. **Sony WH-1000XM5** - ₹12,999, with industry-leading ANC and 30-hour battery life.\n\nIf you need further assistance or more information, feel free to ask!", "turns": 3, "queries": ["Hi! Do you have any wireless headphones?", "What's the status of my order?", "My order ORD102 is late. Also, show me alternatives to what I ordered."], "captured_at": "2026-08-15T17:58:41+00:00", "model": "gpt-4o", "temperature": 0.3, "hitl_answers": ["ORD101"], "llm_calls": 15, "tool_calls": 5, "invocations": 4, "interrupts": 2, "duration_s": 111.52, "tokens": {"input": 6426, "output": 1105}}, "events": [{"k": "turn", "n": 1, "query": "Hi! Do you have any wireless headphones?", "seq": 1, "t": 29.908}, {"k": "invoke", "kind": "start", "input": {"user_query": "Hi! Do you have any wireless headphones?", "messages": [{"role": "human", "text": "Hi! Do you have any wireless headphones?"}]}, "seq": 2, "t": 29.908, "secs": 5.477, "interrupted": false}, {"k": "node", "name": "orchestrator_node", "phase": "enter", "seq": 3, "t": 29.92}, {"k": "llm", "n": 1, "node": "orchestrator_node", "label": "llm", "structured": true, "sent": [{"role": "human", "text": "Analyse this customer query and decide which agent(s) should handle it.\n\nQUERY: \"Hi! Do you have any wireless headphones?\"\n\nAGENTS:\n  product_agent – product searches, recommendations, catalog questions,\n                  AND general conversation (greetings, thanks, chitchat)\n  support_agent   – order status, complaints, escalation to human support\n\nRULES:\n1. Greetings, chitchat, general questions (hi, hello, thanks, how are you)\n   → product_agent only\n2. Product-only queries  → product_agent only\n3. Order/support queries → support_agent only\n4. Mixed queries         → BOTH agents, requires_synthesis = true\n\nIMPORTANT: Only route to support_agent when the query clearly involves\nan order, complaint, or support issue. When in doubt, use product_agent.\n"}], "seq": 4, "t": 29.921, "secs": 1.562, "out": {"structured": {"tasks": [{"agent": "product_agent", "task_description": "Respond to the customer's inquiry about the availability of wireless headphones, provide product recommendations, and engage in any general conversation if needed."}], "requires_synthesis": false, "reasoning": "The customer's query is solely about the availability of a product (wireless headphones), which falls under the responsibilities of the product_agent. There is no mention of an order, complaint, or support issue that would require the involvement of the support_agent."}}}, {"k": "node", "name": "orchestrator_node", "phase": "exit", "outcome": "ok", "secs": 1.564, "seq": 5, "t": 31.483}, {"k": "node", "name": "product_agent", "phase": "enter", "seq": 6, "t": 31.484}, {"k": "llm", "n": 2, "node": "product_agent", "label": "product_agent", "structured": false, "sent": [{"role": "system", "text": "You are the Product Discovery Agent for AxiomCart.\n\nROLE: Help customers find and learn about products. You also handle\ngeneral conversation (greetings, thanks, chitchat).\n\nTOOLS:\n  search_product_catalog – semantic search over our product database\n\nGUIDELINES:\n- For greetings or general chat, respond warmly without calling tools.\n- For product questions, always search the catalog first.\n- Highlight key features and prices.\n- If a product is out of stock, suggest alternatives.\n- If the search returns products the customer has already seen or that\n  don't match what they asked for (wrong brand, wrong category, etc.),\n  be honest and say we don't currently carry what they're looking for.\n  Do NOT present irrelevant products as if they match the request.\n- Keep responses concise and helpful.\n"}, {"role": "human", "text": "CONVERSATION SO FAR:\nCustomer: Hi! Do you have any wireless headphones?\n\nTask: Respond to the customer's inquiry about the availability of wireless headphones, provide product recommendations, and engage in any general conversation if needed.\nCustomer query: Hi! Do you have any wireless headphones?"}], "seq": 7, "t": 31.486, "secs": 0.748, "out": {"content": "", "tool_calls": [{"name": "search_product_catalog", "args": {"query": "wireless headphones"}}], "tokens": {"input_tokens": 292, "output_tokens": 17, "total_tokens": 309}, "model": "gpt-4o-2024-08-06", "finish_reason": "tool_calls"}}, {"k": "tool", "name": "search_product_catalog", "node": "product_agent", "args": {"query": "wireless headphones"}, "seq": 8, "t": 32.235, "secs": 0.23, "out": "Found the following products:\n\nProduct 1:\nProduct: Sony WH-1000XM5 Headphones\nBrand: Sony\nCategory: Electronics\nPrice: ₹12999\nRating: 4.9/5\nFeatures: Industry-leading ANC, 30-hour battery, Speak-to-Chat, LDAC Hi-Res Audio\nDescription: Sony's flagship noise-cancelling headphones with exceptional sound quality.\nColors: Black, Silver\nIn Stock: Yes\n\nProduct 2:\nProduct: Bose QuietComfort 45 Headphones\nBrand: Bose\nCategory: Electronics\nPrice: ₹10199\nRating: 4.7/5\nFeatures: Active Noise Cancellation, 24-hour battery, Bluetooth 5.1, USB-C charging\nDescription: Premium wireless noise-cancelling headphones with legendary Bose sound quality.\nColors: Black, White Smoke\nIn Stock: Yes\n\nProduct 3:\nProduct: boAt Airdopes 141 TWS\nBrand: boAt\nCategory: Electronics\nPrice: ₹1299\nRating: 4.2/5\nFeatures: 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\nDescription: True wireless earbuds with massive battery life and immersive sound.\nColors: Active Black, Bold Blue, Cherry Blossom\nIn Stock: Yes\n\n"}, {"k": "llm", "n": 3, "node": "product_agent", "label": "product_agent", "structured": false, "sent": [{"role": "system", "text": "You are the Product Discovery Agent for AxiomCart.\n\nROLE: Help customers find and learn about products. You also handle\ngeneral conversation (greetings, thanks, chitchat).\n\nTOOLS:\n  search_product_catalog – semantic search over our product database\n\nGUIDELINES:\n- For greetings or general chat, respond warmly without calling tools.\n- For product questions, always search the catalog first.\n- Highlight key features and prices.\n- If a product is out of stock, suggest alternatives.\n- If the search returns products the customer has already seen or that\n  don't match what they asked for (wrong brand, wrong category, etc.),\n  be honest and say we don't currently carry what they're looking for.\n  Do NOT present irrelevant products as if they match the request.\n- Keep responses concise and helpful.\n"}, {"role": "human", "text": "CONVERSATION SO FAR:\nCustomer: Hi! Do you have any wireless headphones?\n\nTask: Respond to the customer's inquiry about the availability of wireless headphones, provide product recommendations, and engage in any general conversation if needed.\nCustomer query: Hi! Do you have any wireless headphones?"}, {"role": "ai", "text": "", "tool_calls": [{"name": "search_product_catalog", "args": {"query": "wireless headphones"}}]}, {"role": "tool", "text": "Found the following products:\n\nProduct 1:\nProduct: Sony WH-1000XM5 Headphones\nBrand: Sony\nCategory: Electronics\nPrice: ₹12999\nRating: 4.9/5\nFeatures: Industry-leading ANC, 30-hour battery, Speak-to-Chat, LDAC Hi-Res Audio\nDescription: Sony's flagship noise-cancelling headphones with exceptional sound quality.\nColors: Black, Silver\nIn Stock: Yes\n\nProduct 2:\nProduct: Bose QuietComfort 45 Headphones\nBrand: Bose\nCategory: Electronics\nPrice: ₹10199\nRating: 4.7/5\nFeatures: Active Noise Cancellation, 24-hour battery, Bluetooth 5.1, USB-C charging\nDescription: Premium wireless noise-cancelling headphones with legendary Bose sound quality.\nColors: Black, White Smoke\nIn Stock: Yes\n\nProduct 3:\nProduct: boAt Airdopes 141 TWS\nBrand: boAt\nCategory: Electronics\nPrice: ₹1299\nRating: 4.2/5\nFeatures: 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\nDescription: True wireless earbuds with massive battery life and immersive sound.\nColors: Active Black, Bold Blue, Cherry Blossom\nIn Stock: Yes\n\n", "tool_call_id": "call_1NCMLKBPNyaQwnjWpGU6Ajz7"}], "seq": 9, "t": 32.466, "secs": 2.916, "out": {"content": "We have a great selection of wireless headphones available:\n\n1. **Sony WH-1000XM5 Headphones**\n   - **Price:** ₹12,999\n   - **Features:** Industry-leading ANC, 30-hour battery, Speak-to-Chat, LDAC Hi-Res Audio\n   - **Colors:** Black, Silver\n   - **Rating:** 4.9/5\n   - **Description:** Sony's flagship noise-cancelling headphones with exceptional sound quality.\n\n2. **Bose QuietComfort 45 Headphones**\n   - **Price:** ₹10,199\n   - **Features:** Active Noise Cancellation, 24-hour battery, Bluetooth 5.1, USB-C charging\n   - **Colors:** Black, White Smoke\n   - **Rating:** 4.7/5\n   - **Description:** Premium wireless noise-cancelling headphones with legendary Bose sound quality.\n\n3. **boAt Airdopes 141 TWS**\n   - **Price:** ₹1,299\n   - **Features:** 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\n   - **Colors:** Active Black, Bold Blue, Cherry Blossom\n   - **Rating:** 4.2/5\n   - **Description:** True wireless earbuds with massive battery life and immersive sound.\n\nLet me know if you need more information on any of these options!", "tokens": {"input_tokens": 586, "output_tokens": 288, "total_tokens": 874}, "model": "gpt-4o-2024-08-06", "finish_reason": "stop"}}, {"k": "node", "name": "product_agent", "phase": "exit", "outcome": "ok", "secs": 3.9, "seq": 10, "t": 35.384}, {"k": "node", "name": "synthesizer_node", "phase": "enter", "seq": 11, "t": 35.385}, {"k": "node", "name": "synthesizer_node", "phase": "exit", "outcome": "ok", "secs": 0.0, "seq": 12, "t": 35.385}, {"k": "final", "turn": 1, "text": "We have a great selection of wireless headphones available:\n\n1. **Sony WH-1000XM5 Headphones**\n   - **Price:** ₹12,999\n   - **Features:** Industry-leading ANC, 30-hour battery, Speak-to-Chat, LDAC Hi-Res Audio\n   - **Colors:** Black, Silver\n   - **Rating:** 4.9/5\n   - **Description:** Sony's flagship noise-cancelling headphones with exceptional sound quality.\n\n2. **Bose QuietComfort 45 Headphones**\n   - **Price:** ₹10,199\n   - **Features:** Active Noise Cancellation, 24-hour battery, Bluetooth 5.1, USB-C charging\n   - **Colors:** Black, White Smoke\n   - **Rating:** 4.7/5\n   - **Description:** Premium wireless noise-cancelling headphones with legendary Bose sound quality.\n\n3. **boAt Airdopes 141 TWS**\n   - **Price:** ₹1,299\n   - **Features:** 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\n   - **Colors:** Active Black, Bold Blue, Cherry Blossom\n   - **Rating:** 4.2/5\n   - **Description:** True wireless earbuds with massive battery life and immersive sound.\n\nLet me know if you need more information on any of these options!", "secs": 5.478, "seq": 13, "t": 35.385}, {"k": "turn", "n": 2, "query": "What's the status of my order?", "seq": 14, "t": 47.642}, {"k": "invoke", "kind": "start", "input": {"user_query": "What's the status of my order?", "messages": [{"role": "human", "text": "What's the status of my order?"}]}, "seq": 15, "t": 47.642, "secs": 1.946, "interrupted": true}, {"k": "node", "name": "orchestrator_node", "phase": "enter", "seq": 16, "t": 47.646}, {"k": "llm", "n": 4, "node": "orchestrator_node", "label": "llm", "structured": true, "sent": [{"role": "human", "text": "Analyse this customer query and decide which agent(s) should handle it.\n\nQUERY: \"What's the status of my order?\"\n\nAGENTS:\n  product_agent – product searches, recommendations, catalog questions,\n                  AND general conversation (greetings, thanks, chitchat)\n  support_agent   – order status, complaints, escalation to human support\n\nRULES:\n1. Greetings, chitchat, general questions (hi, hello, thanks, how are you)\n   → product_agent only\n2. Product-only queries  → product_agent only\n3. Order/support queries → support_agent only\n4. Mixed queries         → BOTH agents, requires_synthesis = true\n\nIMPORTANT: Only route to support_agent when the query clearly involves\nan order, complaint, or support issue. When in doubt, use product_agent.\n"}], "seq": 17, "t": 47.647, "secs": 1.024, "out": {"structured": {"tasks": [{"agent": "support_agent", "task_description": "Check the status of the customer's order and provide an update."}], "requires_synthesis": false, "reasoning": "The query specifically asks about the status of an order, which falls under the domain of the support_agent according to the provided rules. There is no indication of a mixed query or need for product-related information."}}}, {"k": "node", "name": "orchestrator_node", "phase": "exit", "outcome": "ok", "secs": 1.025, "seq": 18, "t": 48.672}, {"k": "node", "name": "support_agent", "phase": "enter", "seq": 19, "t": 48.673}, {"k": "llm", "n": 5, "node": "support_agent", "label": "support_agent", "structured": false, "sent": [{"role": "system", "text": "You are the Sales Support Agent for AxiomCart.\n\nROLE: Handle order enquiries and escalate issues to human agents.\n\nTOOLS:\n  get_order_status   – look up an order by order ID or customer email\n  escalate_to_human  – create a ticket for human support (sends email notification)\n\nPOLICIES:\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\nGUIDELINES:\n- If the customer has NOT provided an order ID or email, you MUST ask\n  for it before calling any tools. Say something like: \"Could you\n  please provide your order ID (e.g. ORD101) or registered email\n  address so I can look up your order?\"\n- Be empathetic and professional.\n- Only call escalate_to_human when the customer explicitly asks for\n  a human agent OR the issue cannot be resolved.\n- After retrieving information, respond directly to the customer.\n"}, {"role": "human", "text": "CONVERSATION SO FAR:\nCustomer: Hi! Do you have any wireless headphones?\nCustomer: What's the status of my order?\n\nTask: Check the status of the customer's order and provide an update.\nCustomer query: What's the status of my order?"}], "seq": 20, "t": 48.675, "secs": 0.911, "out": {"content": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order?", "tokens": {"input_tokens": 486, "output_tokens": 27, "total_tokens": 513}, "model": "gpt-4o-2024-08-06", "finish_reason": "stop"}}, {"k": "interrupt", "node": "support_agent", "question": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order?", "seq": 21, "t": 49.586, "raised": true}, {"k": "node", "name": "support_agent", "phase": "exit", "outcome": "interrupted", "secs": 0.915, "seq": 22, "t": 49.587}, {"k": "invoke", "kind": "resume", "input": {"resume": "ORD101"}, "seq": 23, "t": 56.68, "secs": 3.122, "interrupted": false}, {"k": "node", "name": "support_agent", "phase": "enter", "seq": 24, "t": 56.682}, {"k": "llm", "n": 6, "node": "support_agent", "label": "support_agent", "structured": false, "sent": [{"role": "system", "text": "You are the Sales Support Agent for AxiomCart.\n\nROLE: Handle order enquiries and escalate issues to human agents.\n\nTOOLS:\n  get_order_status   – look up an order by order ID or customer email\n  escalate_to_human  – create a ticket for human support (sends email notification)\n\nPOLICIES:\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\nGUIDELINES:\n- If the customer has NOT provided an order ID or email, you MUST ask\n  for it before calling any tools. Say something like: \"Could you\n  please provide your order ID (e.g. ORD101) or registered email\n  address so I can look up your order?\"\n- Be empathetic and professional.\n- Only call escalate_to_human when the customer explicitly asks for\n  a human agent OR the issue cannot be resolved.\n- After retrieving information, respond directly to the customer.\n"}, {"role": "human", "text": "CONVERSATION SO FAR:\nCustomer: Hi! Do you have any wireless headphones?\nCustomer: What's the status of my order?\n\nTask: Check the status of the customer's order and provide an update.\nCustomer query: What's the status of my order?"}], "seq": 25, "t": 56.683, "secs": 0.898, "out": {"content": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order?", "tokens": {"input_tokens": 486, "output_tokens": 27, "total_tokens": 513}, "model": "gpt-4o-2024-08-06", "finish_reason": "stop"}}, {"k": "interrupt", "node": "support_agent", "question": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order?", "seq": 26, "t": 57.581, "answer": "ORD101"}, {"k": "llm", "n": 7, "node": "support_agent", "label": "support_agent", "structured": false, "sent": [{"role": "system", "text": "You are the Sales Support Agent for AxiomCart.\n\nROLE: Handle order enquiries and escalate issues to human agents.\n\nTOOLS:\n  get_order_status   – look up an order by order ID or customer email\n  escalate_to_human  – create a ticket for human support (sends email notification)\n\nPOLICIES:\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\nGUIDELINES:\n- If the customer has NOT provided an order ID or email, you MUST ask\n  for it before calling any tools. Say something like: \"Could you\n  please provide your order ID (e.g. ORD101) or registered email\n  address so I can look up your order?\"\n- Be empathetic and professional.\n- Only call escalate_to_human when the customer explicitly asks for\n  a human agent OR the issue cannot be resolved.\n- After retrieving information, respond directly to the customer.\n"}, {"role": "human", "text": "CONVERSATION SO FAR:\nCustomer: Hi! Do you have any wireless headphones?\nCustomer: What's the status of my order?\n\nTask: Check the status of the customer's order and provide an update.\nCustomer query: What's the status of my order?"}, {"role": "ai", "text": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order?"}, {"role": "human", "text": "ORD101"}], "seq": 27, "t": 57.583, "secs": 1.047, "out": {"content": "", "tool_calls": [{"name": "get_order_status", "args": {"identifier": "ORD101"}}], "tokens": {"input_tokens": 522, "output_tokens": 16, "total_tokens": 538}, "model": "gpt-4o-2024-08-06", "finish_reason": "tool_calls"}}, {"k": "tool", "name": "get_order_status", "node": "support_agent", "args": {"identifier": "ORD101"}, "seq": 28, "t": 58.633, "secs": 0.001, "out": "Order ORD101:\n  Customer : Rahul Sharma (rahul.sharma@example.com)\n  Product  : Air Jordan 1 Retro High OG\n  Price    : ₹8,999\n  Status   : Shipped\n  Ordered  : 2026-02-10\n  ETA      : 2026-02-13"}, {"k": "llm", "n": 8, "node": "support_agent", "label": "support_agent", "structured": false, "sent": [{"role": "system", "text": "You are the Sales Support Agent for AxiomCart.\n\nROLE: Handle order enquiries and escalate issues to human agents.\n\nTOOLS:\n  get_order_status   – look up an order by order ID or customer email\n  escalate_to_human  – create a ticket for human support (sends email notification)\n\nPOLICIES:\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\nGUIDELINES:\n- If the customer has NOT provided an order ID or email, you MUST ask\n  for it before calling any tools. Say something like: \"Could you\n  please provide your order ID (e.g. ORD101) or registered email\n  address so I can look up your order?\"\n- Be empathetic and professional.\n- Only call escalate_to_human when the customer explicitly asks for\n  a human agent OR the issue cannot be resolved.\n- After retrieving information, respond directly to the customer.\n"}, {"role": "human", "text": "CONVERSATION SO FAR:\nCustomer: Hi! Do you have any wireless headphones?\nCustomer: What's the status of my order?\n\nTask: Check the status of the customer's order and provide an update.\nCustomer query: What's the status of my order?"}, {"role": "ai", "text": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order?"}, {"role": "human", "text": "ORD101"}, {"role": "ai", "text": "", "tool_calls": [{"name": "get_order_status", "args": {"identifier": "ORD101"}}]}, {"role": "tool", "text": "Order ORD101:\n  Customer : Rahul Sharma (rahul.sharma@example.com)\n  Product  : Air Jordan 1 Retro High OG\n  Price    : ₹8,999\n  Status   : Shipped\n  Ordered  : 2026-02-10\n  ETA      : 2026-02-13", "tool_call_id": "call_PTZYJ4TwLR554U01yDm5XqQn"}], "seq": 29, "t": 58.634, "secs": 1.165, "out": {"content": "Your order (ORD101) for the Air Jordan 1 Retro High OG has been shipped. It was ordered on February 10, 2026, and is expected to arrive by February 13, 2026. If you have any more questions or need further assistance, feel free to ask!", "tokens": {"input_tokens": 615, "output_tokens": 62, "total_tokens": 677}, "model": "gpt-4o-2024-08-06", "finish_reason": "stop"}}, {"k": "node", "name": "support_agent", "phase": "exit", "outcome": "ok", "secs": 3.118, "seq": 30, "t": 59.8}, {"k": "node", "name": "synthesizer_node", "phase": "enter", "seq": 31, "t": 59.801}, {"k": "node", "name": "synthesizer_node", "phase": "exit", "outcome": "ok", "secs": 0.0, "seq": 32, "t": 59.801}, {"k": "final", "turn": 2, "text": "Your order (ORD101) for the Air Jordan 1 Retro High OG has been shipped. It was ordered on February 10, 2026, and is expected to arrive by February 13, 2026. If you have any more questions or need further assistance, feel free to ask!", "secs": 12.16, "seq": 33, "t": 59.802}, {"k": "turn", "n": 3, "query": "My order ORD102 is late. Also, show me alternatives to what I ordered.", "seq": 34, "t": 91.645}, {"k": "invoke", "kind": "start", "input": {"user_query": "My order ORD102 is late. Also, show me alternatives to what I ordered.", "messages": [{"role": "human", "text": "My order ORD102 is late. Also, show me alternatives to what I ordered."}]}, "seq": 35, "t": 91.645, "secs": 9.979, "interrupted": false}, {"k": "node", "name": "orchestrator_node", "phase": "enter", "seq": 36, "t": 91.647}, {"k": "llm", "n": 9, "node": "orchestrator_node", "label": "llm", "structured": true, "sent": [{"role": "human", "text": "Analyse this customer query and decide which agent(s) should handle it.\n\nQUERY: \"My order ORD102 is late. Also, show me alternatives to what I ordered.\"\n\nAGENTS:\n  product_agent – product searches, recommendations, catalog questions,\n                  AND general conversation (greetings, thanks, chitchat)\n  support_agent   – order status, complaints, escalation to human support\n\nRULES:\n1. Greetings, chitchat, general questions (hi, hello, thanks, how are you)\n   → product_agent only\n2. Product-only queries  → product_agent only\n3. Order/support queries → support_agent only\n4. Mixed queries         → BOTH agents, requires_synthesis = true\n\nIMPORTANT: Only route to support_agent when the query clearly involves\nan order, complaint, or support issue. When in doubt, use product_agent.\n"}], "seq": 37, "t": 91.647, "secs": 2.195, "out": {"structured": {"tasks": [{"agent": "support_agent", "task_description": "Investigate the status of order ORD102 and provide an update to the customer."}, {"agent": "product_agent", "task_description": "Provide alternative product recommendations based on the customer's original order."}], "requires_synthesis": true, "reasoning": "The query involves both an order status issue and a request for product alternatives. The support_agent should handle the order status inquiry, while the product_agent can assist with providing alternative product recommendations. As both agents need to address different aspects of the query, synthesis of their responses is required."}}}, {"k": "node", "name": "orchestrator_node", "phase": "exit", "outcome": "ok", "secs": 2.196, "seq": 38, "t": 93.842}, {"k": "node", "name": "support_agent", "phase": "enter", "seq": 39, "t": 93.843}, {"k": "node", "name": "product_agent", "phase": "enter", "seq": 40, "t": 93.845}, {"k": "llm", "n": 10, "node": "support_agent", "label": "support_agent", "structured": false, "sent": [{"role": "system", "text": "You are the Sales Support Agent for AxiomCart.\n\nROLE: Handle order enquiries and escalate issues to human agents.\n\nTOOLS:\n  get_order_status   – look up an order by order ID or customer email\n  escalate_to_human  – create a ticket for human support (sends email notification)\n\nPOLICIES:\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\nGUIDELINES:\n- If the customer has NOT provided an order ID or email, you MUST ask\n  for it before calling any tools. Say something like: \"Could you\n  please provide your order ID (e.g. ORD101) or registered email\n  address so I can look up your order?\"\n- Be empathetic and professional.\n- Only call escalate_to_human when the customer explicitly asks for\n  a human agent OR the issue cannot be resolved.\n- After retrieving information, respond directly to the customer.\n"}, {"role": "human", "text": "CONVERSATION SO FAR:\nCustomer: Hi! Do you have any wireless headphones?\nCustomer: What's the status of my order?\nCustomer: My order ORD102 is late. Also, show me alternatives to what I ordered.\n\nTask: Investigate the status of order ORD102 and provide an update to the customer.\nCustomer query: My order ORD102 is late. Also, show me alternatives to what I ordered."}], "seq": 41, "t": 93.846, "secs": 1.485, "out": {"content": "", "tool_calls": [{"name": "get_order_status", "args": {"identifier": "ORD102"}}], "tokens": {"input_tokens": 519, "output_tokens": 16, "total_tokens": 535}, "model": "gpt-4o-2024-08-06", "finish_reason": "tool_calls"}}, {"k": "llm", "n": 11, "node": "product_agent", "label": "product_agent", "structured": false, "sent": [{"role": "system", "text": "You are the Product Discovery Agent for AxiomCart.\n\nROLE: Help customers find and learn about products. You also handle\ngeneral conversation (greetings, thanks, chitchat).\n\nTOOLS:\n  search_product_catalog – semantic search over our product database\n\nGUIDELINES:\n- For greetings or general chat, respond warmly without calling tools.\n- For product questions, always search the catalog first.\n- Highlight key features and prices.\n- If a product is out of stock, suggest alternatives.\n- If the search returns products the customer has already seen or that\n  don't match what they asked for (wrong brand, wrong category, etc.),\n  be honest and say we don't currently carry what they're looking for.\n  Do NOT present irrelevant products as if they match the request.\n- Keep responses concise and helpful.\n"}, {"role": "human", "text": "CONVERSATION SO FAR:\nCustomer: Hi! Do you have any wireless headphones?\nCustomer: What's the status of my order?\nCustomer: My order ORD102 is late. Also, show me alternatives to what I ordered.\n\nTask: Provide alternative product recommendations based on the customer's original order.\nCustomer query: My order ORD102 is late. Also, show me alternatives to what I ordered."}], "seq": 42, "t": 93.849, "secs": 0.634, "out": {"content": "", "tool_calls": [{"name": "search_product_catalog", "args": {"query": "ORD102"}}], "tokens": {"input_tokens": 314, "output_tokens": 16, "total_tokens": 330}, "model": "gpt-4o-2024-08-06", "finish_reason": "tool_calls"}}, {"k": "tool", "name": "search_product_catalog", "node": "product_agent", "args": {"query": "ORD102"}, "seq": 43, "t": 94.486, "secs": 0.377, "out": "Found the following products:\n\nProduct 1:\nProduct: boAt Airdopes 141 TWS\nBrand: boAt\nCategory: Electronics\nPrice: ₹1299\nRating: 4.2/5\nFeatures: 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\nDescription: True wireless earbuds with massive battery life and immersive sound.\nColors: Active Black, Bold Blue, Cherry Blossom\nIn Stock: Yes\n\nProduct 2:\nProduct: iPhone 15 Pro Max\nBrand: Apple\nCategory: Electronics\nPrice: ₹159900\nRating: 4.8/5\nFeatures: A17 Pro chip, Titanium design, 48MP camera, USB-C, 5x optical zoom\nDescription: Apple's most advanced iPhone with titanium design and professional camera.\nColors: Natural Titanium, Blue Titanium, Black Titanium\nIn Stock: Yes\n\nProduct 3:\nProduct: Usha Maxx Air 400mm Table Fan\nBrand: Usha\nCategory: Home Appliances\nPrice: ₹2700\nRating: 4.3/5\nFeatures: 400mm sweep, 3-speed control, Oscillation, Low power consumption\nDescription: Powerful table fan with superior air delivery and energy efficiency.\nColors: White, Blue\nIn Stock: Yes\n\n"}, {"k": "llm", "n": 12, "node": "product_agent", "label": "product_agent", "structured": false, "sent": [{"role": "system", "text": "You are the Product Discovery Agent for AxiomCart.\n\nROLE: Help customers find and learn about products. You also handle\ngeneral conversation (greetings, thanks, chitchat).\n\nTOOLS:\n  search_product_catalog – semantic search over our product database\n\nGUIDELINES:\n- For greetings or general chat, respond warmly without calling tools.\n- For product questions, always search the catalog first.\n- Highlight key features and prices.\n- If a product is out of stock, suggest alternatives.\n- If the search returns products the customer has already seen or that\n  don't match what they asked for (wrong brand, wrong category, etc.),\n  be honest and say we don't currently carry what they're looking for.\n  Do NOT present irrelevant products as if they match the request.\n- Keep responses concise and helpful.\n"}, {"role": "human", "text": "CONVERSATION SO FAR:\nCustomer: Hi! Do you have any wireless headphones?\nCustomer: What's the status of my order?\nCustomer: My order ORD102 is late. Also, show me alternatives to what I ordered.\n\nTask: Provide alternative product recommendations based on the customer's original order.\nCustomer query: My order ORD102 is late. Also, show me alternatives to what I ordered."}, {"role": "ai", "text": "", "tool_calls": [{"name": "search_product_catalog", "args": {"query": "ORD102"}}]}, {"role": "tool", "text": "Found the following products:\n\nProduct 1:\nProduct: boAt Airdopes 141 TWS\nBrand: boAt\nCategory: Electronics\nPrice: ₹1299\nRating: 4.2/5\nFeatures: 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\nDescription: True wireless earbuds with massive battery life and immersive sound.\nColors: Active Black, Bold Blue, Cherry Blossom\nIn Stock: Yes\n\nProduct 2:\nProduct: iPhone 15 Pro Max\nBrand: Apple\nCategory: Electronics\nPrice: ₹159900\nRating: 4.8/5\nFeatures: A17 Pro chip, Titanium design, 48MP camera, USB-C, 5x optical zoom\nDescription: Apple's most advanced iPhone with titanium design and professional camera.\nColors: Natural Titanium, Blue Titanium, Black Titanium\nIn Stock: Yes\n\nProduct 3:\nProduct: Usha Maxx Air 400mm Table Fan\nBrand: Usha\nCategory: Home Appliances\nPrice: ₹2700\nRating: 4.3/5\nFeatures: 400mm sweep, 3-speed control, Oscillation, Low power consumption\nDescription: Powerful table fan with superior air delivery and energy efficiency.\nColors: White, Blue\nIn Stock: Yes\n\n", "tool_call_id": "call_aWuMuQvjRT4Mz2yyyvVjZwE3"}], "seq": 44, "t": 94.864, "secs": 0.713, "out": {"content": "", "tool_calls": [{"name": "search_product_catalog", "args": {"query": "boAt Airdopes 141 TWS alternatives"}}], "tokens": {"input_tokens": 609, "output_tokens": 24, "total_tokens": 633}, "model": "gpt-4o-2024-08-06", "finish_reason": "tool_calls"}}, {"k": "tool", "name": "get_order_status", "node": "support_agent", "args": {"identifier": "ORD102"}, "seq": 45, "t": 95.333, "secs": 0.001, "out": "Order ORD102:\n  Customer : Priya Patel (priya.patel@example.com)\n  Product  : Bose QuietComfort 45 Headphones\n  Price    : ₹10,199\n  Status   : Delayed\n  Ordered  : 2026-02-08\n  ETA      : 2026-02-15\n  Delay    : Bad weather conditions in transit region"}, {"k": "llm", "n": 13, "node": "support_agent", "label": "support_agent", "structured": false, "sent": [{"role": "system", "text": "You are the Sales Support Agent for AxiomCart.\n\nROLE: Handle order enquiries and escalate issues to human agents.\n\nTOOLS:\n  get_order_status   – look up an order by order ID or customer email\n  escalate_to_human  – create a ticket for human support (sends email notification)\n\nPOLICIES:\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\nGUIDELINES:\n- If the customer has NOT provided an order ID or email, you MUST ask\n  for it before calling any tools. Say something like: \"Could you\n  please provide your order ID (e.g. ORD101) or registered email\n  address so I can look up your order?\"\n- Be empathetic and professional.\n- Only call escalate_to_human when the customer explicitly asks for\n  a human agent OR the issue cannot be resolved.\n- After retrieving information, respond directly to the customer.\n"}, {"role": "human", "text": "CONVERSATION SO FAR:\nCustomer: Hi! Do you have any wireless headphones?\nCustomer: What's the status of my order?\nCustomer: My order ORD102 is late. Also, show me alternatives to what I ordered.\n\nTask: Investigate the status of order ORD102 and provide an update to the customer.\nCustomer query: My order ORD102 is late. Also, show me alternatives to what I ordered."}, {"role": "ai", "text": "", "tool_calls": [{"name": "get_order_status", "args": {"identifier": "ORD102"}}]}, {"role": "tool", "text": "Order ORD102:\n  Customer : Priya Patel (priya.patel@example.com)\n  Product  : Bose QuietComfort 45 Headphones\n  Price    : ₹10,199\n  Status   : Delayed\n  Ordered  : 2026-02-08\n  ETA      : 2026-02-15\n  Delay    : Bad weather conditions in transit region", "tool_call_id": "call_ARqlKRlDLTwMSxnCyhxGvDnO"}], "seq": 46, "t": 95.335, "secs": 1.707, "out": {"content": "I'm sorry to hear that your order is delayed. Here's the current status for order ORD102:\n\n- **Product**: Bose QuietComfort 45 Headphones\n- **Price**: ₹10,199\n- **Status**: Delayed\n- **Ordered on**: February 8, 2026\n- **Estimated Arrival**: February 15, 2026\n- **Reason for Delay**: Bad weather conditions in the transit region\n\nAs for alternatives to the Bose QuietComfort 45 Headphones, here are a few options you might consider:\n\n1. **Sony WH-1000XM4** - Known for excellent noise cancellation and sound quality.\n2. **Sennheiser Momentum 3 Wireless** - Offers great sound and a stylish design.\n3. **Apple AirPods Max** - Provides a premium experience with seamless integration for Apple users.\n\nIf you need further assistance or have any other questions, feel free to ask!", "tokens": {"input_tokens": 624, "output_tokens": 194, "total_tokens": 818}, "model": "gpt-4o-2024-08-06", "finish_reason": "stop"}}, {"k": "tool", "name": "search_product_catalog", "node": "product_agent", "args": {"query": "boAt Airdopes 141 TWS alternatives"}, "seq": 47, "t": 95.579, "secs": 0.176, "out": "Found the following products:\n\nProduct 1:\nProduct: boAt Airdopes 141 TWS\nBrand: boAt\nCategory: Electronics\nPrice: ₹1299\nRating: 4.2/5\nFeatures: 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\nDescription: True wireless earbuds with massive battery life and immersive sound.\nColors: Active Black, Bold Blue, Cherry Blossom\nIn Stock: Yes\n\nProduct 2:\nProduct: Bose QuietComfort 45 Headphones\nBrand: Bose\nCategory: Electronics\nPrice: ₹10199\nRating: 4.7/5\nFeatures: Active Noise Cancellation, 24-hour battery, Bluetooth 5.1, USB-C charging\nDescription: Premium wireless noise-cancelling headphones with legendary Bose sound quality.\nColors: Black, White Smoke\nIn Stock: Yes\n\nProduct 3:\nProduct: Sony WH-1000XM5 Headphones\nBrand: Sony\nCategory: Electronics\nPrice: ₹12999\nRating: 4.9/5\nFeatures: Industry-leading ANC, 30-hour battery, Speak-to-Chat, LDAC Hi-Res Audio\nDescription: Sony's flagship noise-cancelling headphones with exceptional sound quality.\nColors: Black, Silver\nIn Stock: Yes\n\n"}, {"k": "llm", "n": 14, "node": "product_agent", "label": "product_agent", "structured": false, "sent": [{"role": "system", "text": "You are the Product Discovery Agent for AxiomCart.\n\nROLE: Help customers find and learn about products. You also handle\ngeneral conversation (greetings, thanks, chitchat).\n\nTOOLS:\n  search_product_catalog – semantic search over our product database\n\nGUIDELINES:\n- For greetings or general chat, respond warmly without calling tools.\n- For product questions, always search the catalog first.\n- Highlight key features and prices.\n- If a product is out of stock, suggest alternatives.\n- If the search returns products the customer has already seen or that\n  don't match what they asked for (wrong brand, wrong category, etc.),\n  be honest and say we don't currently carry what they're looking for.\n  Do NOT present irrelevant products as if they match the request.\n- Keep responses concise and helpful.\n"}, {"role": "human", "text": "CONVERSATION SO FAR:\nCustomer: Hi! Do you have any wireless headphones?\nCustomer: What's the status of my order?\nCustomer: My order ORD102 is late. Also, show me alternatives to what I ordered.\n\nTask: Provide alternative product recommendations based on the customer's original order.\nCustomer query: My order ORD102 is late. Also, show me alternatives to what I ordered."}, {"role": "ai", "text": "", "tool_calls": [{"name": "search_product_catalog", "args": {"query": "ORD102"}}]}, {"role": "tool", "text": "Found the following products:\n\nProduct 1:\nProduct: boAt Airdopes 141 TWS\nBrand: boAt\nCategory: Electronics\nPrice: ₹1299\nRating: 4.2/5\nFeatures: 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\nDescription: True wireless earbuds with massive battery life and immersive sound.\nColors: Active Black, Bold Blue, Cherry Blossom\nIn Stock: Yes\n\nProduct 2:\nProduct: iPhone 15 Pro Max\nBrand: Apple\nCategory: Electronics\nPrice: ₹159900\nRating: 4.8/5\nFeatures: A17 Pro chip, Titanium design, 48MP camera, USB-C, 5x optical zoom\nDescription: Apple's most advanced iPhone with titanium design and professional camera.\nColors: Natural Titanium, Blue Titanium, Black Titanium\nIn Stock: Yes\n\nProduct 3:\nProduct: Usha Maxx Air 400mm Table Fan\nBrand: Usha\nCategory: Home Appliances\nPrice: ₹2700\nRating: 4.3/5\nFeatures: 400mm sweep, 3-speed control, Oscillation, Low power consumption\nDescription: Powerful table fan with superior air delivery and energy efficiency.\nColors: White, Blue\nIn Stock: Yes\n\n", "tool_call_id": "call_aWuMuQvjRT4Mz2yyyvVjZwE3"}, {"role": "ai", "text": "", "tool_calls": [{"name": "search_product_catalog", "args": {"query": "boAt Airdopes 141 TWS alternatives"}}]}, {"role": "tool", "text": "Found the following products:\n\nProduct 1:\nProduct: boAt Airdopes 141 TWS\nBrand: boAt\nCategory: Electronics\nPrice: ₹1299\nRating: 4.2/5\nFeatures: 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\nDescription: True wireless earbuds with massive battery life and immersive sound.\nColors: Active Black, Bold Blue, Cherry Blossom\nIn Stock: Yes\n\nProduct 2:\nProduct: Bose QuietComfort 45 Headphones\nBrand: Bose\nCategory: Electronics\nPrice: ₹10199\nRating: 4.7/5\nFeatures: Active Noise Cancellation, 24-hour battery, Bluetooth 5.1, USB-C charging\nDescription: Premium wireless noise-cancelling headphones with legendary Bose sound quality.\nColors: Black, White Smoke\nIn Stock: Yes\n\nProduct 3:\nProduct: Sony WH-1000XM5 Headphones\nBrand: Sony\nCategory: Electronics\nPrice: ₹12999\nRating: 4.9/5\nFeatures: Industry-leading ANC, 30-hour battery, Speak-to-Chat, LDAC Hi-Res Audio\nDescription: Sony's flagship noise-cancelling headphones with exceptional sound quality.\nColors: Black, Silver\nIn Stock: Yes\n\n", "tool_call_id": "call_beP1C6sNXReOKaInhEABtPca"}], "seq": 48, "t": 95.756, "secs": 2.033, "out": {"content": "It seems your original order was for the **boAt Airdopes 141 TWS**. Here are some alternative wireless headphones you might consider:\n\n1. **Bose QuietComfort 45 Headphones**\n   - Price: ₹10,199\n   - Features: Active Noise Cancellation, 24-hour battery, Bluetooth 5.1, USB-C charging\n   - Colors: Black, White Smoke\n   - Description: Premium wireless noise-cancelling headphones with legendary Bose sound quality.\n\n2. **Sony WH-1000XM5 Headphones**\n   - Price: ₹12,999\n   - Features: Industry-leading ANC, 30-hour battery, Speak-to-Chat, LDAC Hi-Res Audio\n   - Colors: Black, Silver\n   - Description: Sony's flagship noise-cancelling headphones with exceptional sound quality.\n\nThese options offer advanced features and excellent sound quality. Let me know if you need more information!", "tokens": {"input_tokens": 910, "output_tokens": 192, "total_tokens": 1102}, "model": "gpt-4o-2024-08-06", "finish_reason": "stop"}}, {"k": "node", "name": "support_agent", "phase": "exit", "outcome": "ok", "secs": 3.2, "seq": 49, "t": 97.044}, {"k": "node", "name": "product_agent", "phase": "exit", "outcome": "ok", "secs": 3.946, "seq": 50, "t": 97.79}, {"k": "node", "name": "synthesizer_node", "phase": "enter", "seq": 51, "t": 97.791}, {"k": "llm", "n": 15, "node": "synthesizer_node", "label": "llm", "structured": false, "sent": [{"role": "human", "text": "You are combining responses from multiple specialist agents.\n\nCUSTOMER QUERY: My order ORD102 is late. Also, show me alternatives to what I ordered.\n\nAGENT RESPONSES:\n[SALES_SUPPORT]:\nI'm sorry to hear that your order is delayed. Here's the current status for order ORD102:\n\n- **Product**: Bose QuietComfort 45 Headphones\n- **Price**: ₹10,199\n- **Status**: Delayed\n- **Ordered on**: February 8, 2026\n- **Estimated Arrival**: February 15, 2026\n- **Reason for Delay**: Bad weather conditions in the transit region\n\nAs for alternatives to the Bose QuietComfort 45 Headphones, here are a few options you might consider:\n\n1. **Sony WH-1000XM4** - Known for excellent noise cancellation and sound quality.\n2. **Sennheiser Momentum 3 Wireless** - Offers great sound and a stylish design.\n3. **Apple AirPods Max** - Provides a premium experience with seamless integration for Apple users.\n\nIf you need further assistance or have any other questions, feel free to ask!\n\n[PRODUCT_DISCOVERY]:\nIt seems your original order was for the **boAt Airdopes 141 TWS**. Here are some alternative wireless headphones you might consider:\n\n1. **Bose QuietComfort 45 Headphones**\n   - Price: ₹10,199\n   - Features: Active Noise Cancellation, 24-hour battery, Bluetooth 5.1, USB-C charging\n   - Colors: Black, White Smoke\n   - Description: Premium wireless noise-cancelling headphones with legendary Bose sound quality.\n\n2. **Sony WH-1000XM5 Headphones**\n   - Price: ₹12,999\n   - Features: Industry-leading ANC, 30-hour battery, Speak-to-Chat, LDAC Hi-Res Audio\n   - Colors: Black, Silver\n   - Description: Sony's flagship noise-cancelling headphones with exceptional sound quality.\n\nThese options offer advanced features and excellent sound quality. Let me know if you need more information!\n\nWrite a single, coherent reply that addresses every part of the customer's query. Be concise. Speak as 'AxiomCart Assistant'."}], "seq": 52, "t": 97.791, "secs": 3.831, "out": {"content": "Hello! I'm sorry to hear that your order ORD102 is delayed. Here's the current status:\n\n- **Product**: Bose QuietComfort 45 Headphones\n- **Price**: ₹10,199\n- **Status**: Delayed due to bad weather conditions in the transit region\n- **Ordered on**: February 8, 2026\n- **Estimated Arrival**: February 15, 2026\n\nFor alternatives to the Bose QuietComfort 45 Headphones, you might consider:\n\n1. **Sony WH-1000XM4** - Excellent noise cancellation and sound quality.\n2. **Sennheiser Momentum 3 Wireless** - Great sound with a stylish design.\n3. **Apple AirPods Max** - Premium experience, especially for Apple users.\n\nAdditionally, if your original interest was in the boAt Airdopes 141 TWS, here are some other options:\n\n1. **Sony WH-1000XM5** - ₹12,999, with industry-leading ANC and 30-hour battery life.\n\nIf you need further assistance or more information, feel free to ask!", "tokens": {"input_tokens": 463, "output_tokens": 226, "total_tokens": 689}, "model": "gpt-4o-2024-08-06", "finish_reason": "stop"}}, {"k": "node", "name": "synthesizer_node", "phase": "exit", "outcome": "ok", "secs": 3.831, "seq": 53, "t": 101.622}, {"k": "final", "turn": 3, "text": "Hello! I'm sorry to hear that your order ORD102 is delayed. Here's the current status:\n\n- **Product**: Bose QuietComfort 45 Headphones\n- **Price**: ₹10,199\n- **Status**: Delayed due to bad weather conditions in the transit region\n- **Ordered on**: February 8, 2026\n- **Estimated Arrival**: February 15, 2026\n\nFor alternatives to the Bose QuietComfort 45 Headphones, you might consider:\n\n1. **Sony WH-1000XM4** - Excellent noise cancellation and sound quality.\n2. **Sennheiser Momentum 3 Wireless** - Great sound with a stylish design.\n3. **Apple AirPods Max** - Premium experience, especially for Apple users.\n\nAdditionally, if your original interest was in the boAt Airdopes 141 TWS, here are some other options:\n\n1. **Sony WH-1000XM5** - ₹12,999, with industry-leading ANC and 30-hour battery life.\n\nIf you need further assistance or more information, feel free to ask!", "secs": 9.979, "seq": 54, "t": 101.624}]}/*__END_CAPTURE__*/;
+let captureName = capture ? 'built in' : null;
+let activeTurn = 0;
+
+try {
+  const saved = localStorage.getItem('axiomcart.trace');
+  if(saved && !capture){
+    const o = JSON.parse(saved);
+    capture = o.payload; captureName = o.name + ' (restored)';
+  }
+} catch(e){ /* storage blocked — ignore */ }
+
+/* Traces captured before the AIMessage/structured fix recorded the whole raw
+   message under "structured". Unwrap those so older files still render. */
+function normOut(o){
+  const s = o && o.structured;
+  if(!s || typeof s !== 'object' || !('content' in s)) return o;
+  if(!('response_metadata' in s || 'additional_kwargs' in s || 'usage_metadata' in s)) return o;
+  const um = s.usage_metadata || {}, rm = s.response_metadata || {};
+  const tcs = (s.tool_calls || []).map(t => ({name:t.name, args:t.args}));
+  const out = {content: typeof s.content === 'string' ? s.content : JSON.stringify(s.content)};
+  if(tcs.length) out.tool_calls = tcs;
+  if(um.input_tokens != null) out.tokens = {input_tokens:um.input_tokens, output_tokens:um.output_tokens};
+  if(rm.model_name) out.model = rm.model_name;
+  if(rm.finish_reason) out.finish_reason = rm.finish_reason;
+  return out;
+}
+
+/* ── Which parts of a prompt were filled in at runtime ──────
+   The templates live in src/nodes.py; these anchors are the literal
+   text around each f-string slot, so what gets highlighted is the slot
+   itself rather than anything that merely looks like a value. */
+function varSpans(text){
+  const out = [];
+  const add = (a, b, cls) => { if(b > a) out.push([a, b, cls || 'v']); };
+  const between = (open, close) => {          // value between two literals
+    const a = text.indexOf(open);
+    if(a !== 0) return;                        // must anchor at the start
+    const s = open.length, e = text.indexOf(close, s);
+    if(e > -1) add(s, e);
+  };
+
+  // orchestrator_node — QUERY: "{user_query}"
+  between('Analyse this customer query and decide which agent(s) should handle it.\n\nQUERY: "',
+          '"\n\nAGENTS:');
+
+  // synthesizer_node — CUSTOMER QUERY: {user_query} … AGENT RESPONSES:\n{parts}
+  if(text.startsWith('You are combining responses from multiple specialist agents.')){
+    const qOpen = 'CUSTOMER QUERY: ', rOpen = '\n\nAGENT RESPONSES:\n';
+    const qa = text.indexOf(qOpen) + qOpen.length, qb = text.indexOf(rOpen, qa);
+    if(qb > -1){
+      add(qa, qb);
+      const ra = qb + rOpen.length, rb = text.indexOf('\n\nWrite a single, coherent reply', ra);
+      if(rb > -1) add(ra, rb);
+    }
+  }
+
+  // SUPPORT_PROMPT interpolates {SUPPORT_POLICIES}, but that is a module
+  // constant — same text on every run — so it is not marked.
+
+  // agent worker input — f"{context}Task: {task}\nCustomer query: {query}"
+  const w = /^([\s\S]*?)Task: ([\s\S]*?)\nCustomer query: ([\s\S]*)$/.exec(text);
+  if(w){
+    const [, ctx, task, query] = w;
+    if(ctx){                                   // build_context(): header is literal
+      const h = 'CONVERSATION SO FAR:\n';
+      const from = ctx.startsWith(h) ? h.length : 0;
+      add(from, ctx.length - (ctx.endsWith('\n\n') ? 2 : 0));
+    }
+    const t = ctx.length + 'Task: '.length;
+    add(t, t + task.length, 'task');           // written by the classifier
+    const q = t + task.length + '\nCustomer query: '.length;
+    add(q, q + query.length);
+  }
+
+  return out;
+}
+
+/* task_description values inside a ClassificationResult reply — the same
+   strings that arrive as {task_desc} in each agent's prompt. */
+function structSpans(text){
+  const out = [];
+
+  const stringValue = (key, cls) => {                 // "key": "…value…"
+    const re = new RegExp('"' + key + '"\\s*:\\s*"', 'g');
+    let m;
+    while((m = re.exec(text))){
+      const a = m.index + m[0].length;
+      let i = a;
+      while(i < text.length){
+        if(text[i] === '\\'){ i += 2; continue; }
+        if(text[i] === '"') break;
+        i++;
+      }
+      out.push([a, i, cls]);
+    }
+  };
+
+  stringValue('task_description', 'task');            // handed to an agent verbatim
+  stringValue('agent', 'b');                          // the routing decision
+  let m;
+  const bare = /"requires_synthesis"\s*:\s*(true|false)/g;
+  while((m = bare.exec(text))){
+    const a = m.index + m[0].length - m[1].length;
+    out.push([a, a + m[1].length, 'b']);
+  }
+  return out;                                         // "reasoning" left plain
+}
+
+function markRanges(text, spans){
+  spans = spans.filter(s => s[1] > s[0]).sort((a, b) => a[0] - b[0]);
+  if(!spans.length) return esc(text);
+  let html = '', pos = 0;
+  spans.forEach(([a, b, cls]) => {
+    if(a < pos) return;                        // ignore any overlap
+    html += esc(text.slice(pos, a)) + `<mark class="${cls}">${esc(text.slice(a, b))}</mark>`;
+    pos = b;
+  });
+  return html + esc(text.slice(pos));
+}
+
+/* One box per message. When a message also carries tool calls the box is
+   split in two labelled halves rather than becoming two boxes. */
+function renderMsg(m){
+  const head = `<span class="role">${m.r}</span><span class="mlabel">${m.label || ''}</span>`
+             + (m.ref ? refChip(m.ref) : '');
+  const split = (m.tools || []).length > 0;
+  const spans = m.mark === 'prompt' ? varSpans(m.text)
+              : m.mark === 'struct' ? structSpans(m.text) : null;
+  const body = m.text === ''
+    ? `<pre class="notext">no text content</pre>`
+    : `<pre>${spans ? markRanges(m.text, spans) : esc(m.text)}</pre>`;
+  const tools = split
+    ? `<div class="mtools"><p class="part">tool_call</p>${renderToolCalls(m.tools, true)}</div>` : '';
+  return `<div class="msg ${m.r}"><div class="mh">${head}</div>`
+       + (split ? `<p class="part">message</p>` : '')
+       + `${body}${tools}</div>`;
+}
+
+/* `bare` drops the "tool_call →" prefix for places that already label it */
+function renderToolCalls(tcs, bare){
+  return tcs.map(tc => `<div class="tcall">${bare ? '' : '<span class="tk">tool_call →</span> '}`
+    + `<span class="tn">${esc(tc.name)}</span><span class="tk">(</span>`
+    + `<span class="ta">${esc(JSON.stringify(tc.args).slice(1,-1))}</span><span class="tk">)</span></div>`).join('');
+}
+
+/* Identity of a message, so the same content shown twice is recognised
+   whether it arrives as an input, a reply, or a tool execution result. */
+function msgKey(role, text, toolCalls){
+  return role + ' ' + (text || '') + ' ' + JSON.stringify(toolCalls || '');
+}
+
+function capMsg(m, node){
+  const label = [m.tool_call_id ? `tool_call_id ${m.tool_call_id}` : '',
+                 (m.tool_calls || []).length ? `${m.tool_calls.length} tool call${m.tool_calls.length>1?'s':''}` : '']
+                .filter(Boolean).join(' · ');
+  // only prompts have template slots — replies and tool output do not
+  const mark = (m.role === 'system' || m.role === 'human') ? 'prompt' : null;
+  return renderMsg({r:m.role, label, text:m.text, mark, tools:m.tool_calls, ref:promptRef(m, node)});
+}
+
+/* Every call re-sends the whole history, and each tool result and model reply
+   is already displayed on its own before it comes back as an input. Fold each
+   consecutive run of content shown earlier into one expander, leaving only
+   what is genuinely new expanded. */
+function capMsgs(msgs, seen, node){
+  const out = [];
+  let run = [];
+
+  const flush = () => {
+    if(!run.length) return;
+    const roles = run.map(m => m.role).join(' · ');
+    const lines = run.reduce((a, m) => a + (m.text || '').split('\n').length, 0);
+    out.push(`<div class="msgset"><details><summary>
+        <b>${run.length} earlier message${run.length > 1 ? 's' : ''}</b> already shown above
+        <span class="mlabel">${esc(roles)} · ${lines} lines</span></summary>
+      <div class="msgset-body">${run.map(m => capMsg(m, node)).join('')}</div>
+      <div class="msgset-end">end of the ${run.length} earlier message${run.length > 1 ? 's' : ''}</div>
+      </details></div>`);
+    run = [];
+  };
+
+  msgs.forEach(m => {
+    const key = msgKey(m.role, m.text, m.tool_calls);
+    if(seen.has(key)) { run.push(m); return; }
+    seen.add(key);
+    flush();
+    out.push(capMsg(m, node));
+  });
+  flush();
+  return out.join('');
+}
+
+function capOut(o){
+  if(!o) return `<div class="callnote">No reply recorded — the call raised before returning.</div>`;
+  if(o.structured){
+    return renderMsg({r:'ai', label:'parsed into a ClassificationResult',
+                      text:JSON.stringify(o.structured, null, 2), mark:'struct'});
+  }
+  return renderMsg({r:'ai', label:o.finish_reason ? `finish_reason: ${o.finish_reason}` : '',
+                    text:o.content, tools:o.tool_calls});
+}
+
+/* One group per graph execution. Traces from before multi-turn capture have
+   no turn markers — treat those as a single execution. */
+function splitTurns(events){
+  const groups = [];
+  events.forEach(e => {
+    if(e.k === 'turn') groups.push({n: e.n, query: e.query, events: []});
+    else {
+      if(!groups.length) groups.push({n: 1, query: (capture.meta || {}).query || 'execution', events: []});
+      groups[groups.length - 1].events.push(e);
+    }
+  });
+  return groups;
+}
+
+/* ── Code behind each step of a captured run ──────────────── */
+const TRACE_CODE = {
+  node: {
+    orchestrator_node: {f:'src/nodes.py', r:[[225,283]]},
+    product_agent:     {f:'src/nodes.py', r:[[290,308]]},
+    support_agent:     {f:'src/nodes.py', r:[[315,338]]},
+    synthesizer_node:  {f:'src/nodes.py', r:[[345,372]]},
+  },
+  llm: {
+    orchestrator_node: {f:'src/nodes.py', r:[[233,252]]},
+    product_agent:     {f:'src/nodes.py', r:[[123,127]]},
+    support_agent:     {f:'src/nodes.py', r:[[153,169]]},
+    synthesizer_node:  {f:'src/nodes.py', r:[[360,372]]},
+  },
+  tool: {
+    search_product_catalog: {f:'src/tools.py', r:[[48,66]]},
+    get_order_status:       {f:'src/tools.py', r:[[73,107]]},
+    escalate_to_human:      {f:'src/tools.py', r:[[110,151]]},
+  },
+  interrupt: {f:'src/nodes.py', r:[[161,167]]},
+  invoke: {start: {f:'src/main.py', r:[[57,62]]}, resume: {f:'src/main.py', r:[[64,78]]}},
+};
+
+/* Where a prompt is written, for the messages the code composes. User text
+   and model output have no definition, so they get no link. */
+function promptRef(m, node){
+  const t = m.text || '';
+  if(m.role === 'system'){
+    if(t.startsWith('You are the Product Discovery Agent')) return {f:'src/nodes.py', r:[[47,66]]};
+    if(t.startsWith('You are the Sales Support Agent'))     return {f:'src/nodes.py', r:[[68,89]]};
+  }
+  if(m.role === 'human'){
+    if(t.startsWith('Analyse this customer query'))         return {f:'src/nodes.py', r:[[233,248]]};
+    if(t.startsWith('You are combining responses'))         return {f:'src/nodes.py', r:[[363,369]]};
+    if(/\nCustomer query: /.test(t) && /(^|\n)Task: /.test(t)){
+      return node === 'support_agent'
+        ? {f:'src/nodes.py', r:[[328,331]]}
+        : {f:'src/nodes.py', r:[[298,301]]};
+    }
+  }
+  return null;
+}
+
+let PANE_REFS = [];
+function refChip(ref){
+  if(!ref) return '';
+  PANE_REFS.push(ref);
+  return `<button class="srcbtn" data-pref="${PANE_REFS.length - 1}">${ref.f.replace('src/','')}:${ref.r[0][0]}</button>`;
+}
+
+/* Agents dispatched together interleave in the recording, which reads as if
+   they were talking to each other. They never do, so each parallel region is
+   re-sorted into one contiguous lane per node, order preserved within a lane. */
+function groupParallel(events){
+  const nodeOf = e => e.k === 'node' ? e.name : e.node;
+  const out = [];
+  let i = 0;
+
+  while(i < events.length){
+    if(events[i].k !== 'node' || events[i].phase !== 'enter'){ out.push(events[i++]); continue; }
+
+    const region = [];
+    const open = new Set();
+    let j = i;
+    do {
+      const e = events[j++];
+      region.push(e);
+      if(e.k === 'node' && e.phase === 'enter') open.add(e.name);
+      if(e.k === 'node' && e.phase === 'exit') open.delete(e.name);
+    } while(j < events.length && open.size);
+    i = j;
+
+    const lanes = [...new Set(region.filter(e => e.k === 'node' && e.phase === 'enter').map(e => e.name))];
+    if(lanes.length < 2){ out.push(...region); continue; }
+
+    out.push(...region.filter(e => !lanes.includes(nodeOf(e))));   // unattributed, keep up front
+    lanes.forEach(name => {
+      region.filter(e => nodeOf(e) === name).forEach((e, k) => {
+        out.push(k === 0 && e.k === 'node' ? {...e, parallel: lanes} : e);
+      });
+    });
+  }
+  return out;
+}
+
+function renderEvents(events){
+  events = groupParallel(events);
+  let invokeN = 0;
+  const seenByNode = {};
+  const interruptedNodes = new Set();
+  const seenFor = n => seenByNode[n] || (seenByNode[n] = new Set());
+
+  return events.map(e => {
+    if(e.k === 'invoke'){
+      invokeN++;
+      // the start payload just repeats the headline query; the resume value does not
+      const inp = e.kind === 'resume'
+        ? esc(`Command(resume=${JSON.stringify(e.input && e.input.resume)})`) : '';
+      const sub = [inp, e.secs != null ? `returned after ${e.secs}s` : '',
+                   e.interrupted ? '<b>interrupted</b>' : ''].filter(Boolean).join(' · ');
+      return `<div class="phase"><h2>invoke #${invokeN} — ${e.kind} ${refChip(TRACE_CODE.invoke[e.kind])}</h2>
+        ${sub ? `<p class="psub">${sub}</p>` : ''}</div>`;
+    }
+    if(e.k === 'node'){
+      if(e.phase === 'enter'){
+        const replay = interruptedNodes.has(e.name);
+        const par = e.parallel
+          ? `<span class="np">parallel with ${esc(e.parallel.filter(n => n !== e.name).join(', '))}</span>` : '';
+        return `<div class="nodebar"><div class="nrow">
+          <span class="nn">${esc(e.name)}</span>
+          ${replay ? `<span class="nr">replay</span>` : ''}${par}
+          <span class="nsp"></span>${refChip(TRACE_CODE.node[e.name])}</div></div>`;
+      }
+      if(e.outcome && e.outcome !== 'ok'){
+        if(e.outcome === 'interrupted') interruptedNodes.add(e.name);
+        return `<div class="nodeexit"><span class="nx">${esc(e.name)} exited: ${esc(e.outcome)} after ${e.secs}s</span></div>`;
+      }
+      return '';
+    }
+    if(e.k === 'interrupt'){
+      return `<div class="evt ${e.raised ? 'pause' : 'resume'}"><span class="ei">${e.raised ? '⏸' : '▶'}</span><div>
+        <b>interrupt() — ${e.raised ? 'graph suspended' : `resumed with ${esc(JSON.stringify(e.answer))}`} ${refChip(TRACE_CODE.interrupt)}</b>
+        <span class="d">${esc(e.question)}</span></div></div>`;
+    }
+    if(e.k === 'final'){
+      return `<div class="evt"><span class="ei">✓</span><div><b>final_answer${e.secs != null ? ` — ${e.secs}s for this execution` : ''}</b>
+        <pre style="margin:7px 0 0;white-space:pre-wrap;font:12px/1.6 ui-monospace,Menlo,monospace">${esc(e.text)}</pre></div></div>`;
+    }
+    if(e.k === 'tool'){
+      const html = `<div class="call"><div class="ch">
+          <span class="idx">TOOL</span><span class="cname">${esc(e.node || '')}</span>
+          <span class="csig">${esc(e.name)}${e.secs != null ? ` · ${e.secs}s` : ''}</span>
+          ${refChip(TRACE_CODE.tool[e.name])}
+        </div><div class="cb">
+          <p class="grp">Called with</p>
+          ${renderToolCalls([{name:e.name, args:e.args || {}}])}
+          <p class="grp ret">Returned</p>
+          ${e.error ? `<div class="msg tool"><div class="err">${esc(e.error)}</div></div>`
+                    : renderMsg({r:'tool', label:`${e.name} → str`, text:e.out || ''})}
+        </div></div>`;
+      // this output is about to come back as an input on the next call
+      if(!e.error) seenFor(e.node).add(msgKey('tool', e.out || '', null));
+      return html;
+    }
+    if(e.k !== 'llm') return '';
+
+    const node = e.node || e.label || '';
+    const seen = seenFor(node);
+    const tok = (e.out && e.out.tokens) || {};
+    const bits = [e.out && e.out.model, e.secs != null ? `${e.secs}s` : null,
+                  tok.input_tokens != null ? `${tok.input_tokens}+${tok.output_tokens} tokens` : null].filter(Boolean).join(' · ');
+    const html = `<div class="call"><div class="ch">
+        <span class="idx">LLM ${e.n}</span><span class="cname">${esc(node)}</span>
+        <span class="csig">${esc(bits)}</span>
+        ${refChip(TRACE_CODE.llm[node])}
+      </div><div class="cb">
+        <p class="grp">Prompt — ${e.sent.length} message${e.sent.length>1?'s':''}</p>
+        ${e.sent.some(m => m.role === 'system') ? '' :
+          `<div class="msg system missing"><div class="mh">
+             <span class="role">system</span><span class="mlabel">not provided</span></div></div>`}
+        ${capMsgs(e.sent, seen, node)}
+        <p class="grp ret">Response</p>
+        ${e.error ? `<div class="msg ai"><div class="err">${esc(e.error)}</div></div>` : capOut(e.out)}
+      </div></div>`;
+    // the reply is appended to messages, so it returns as an input next call
+    if(e.out && !e.out.structured && !e.error){
+      seen.add(msgKey('ai', e.out.content, e.out.tool_calls));
+    }
+    return html;
+  }).join('');
+}
+
+function renderTrace(){
+  const root = document.getElementById('traceroot');
+  PANE_REFS = [];
+
+  if(!capture){
+    root.innerHTML = `<h1>Prompt Trace</h1>
+      <div class="srcbar">
+        <label class="up">load trace.json<input type="file" accept=".json,application/json" id="tracefile"></label>
+        <span class="hint">or drop one anywhere on this tab</span>
+      </div>
+      <div class="howto"><pre>${esc(CAPTURE_CMD)}</pre></div>`;
+    wireTrace();
+    return;
+  }
+
+  const m = capture.meta || {};
+
+  // Normalise once; recover token totals a pre-fix capture may have missed.
+  let tin = 0, tout = 0;
+  (capture.events || []).forEach(e => {
+    if(e.k !== 'llm') return;
+    e.out = normOut(e.out);
+    const t = (e.out && e.out.tokens) || {};
+    tin += t.input_tokens || 0; tout += t.output_tokens || 0;
+  });
+  if((tin || tout) && (!m.tokens || !(m.tokens.input || m.tokens.output))) m.tokens = {input:tin, output:tout};
+
+  const groups = splitTurns(capture.events || []);
+  if(activeTurn >= groups.length) activeTurn = 0;
+  const g = groups[activeTurn] || {events: []};
+
+  const meta = [
+    ['model', m.model], ['temperature', m.temperature],
+    ['executions', groups.length],
+    ['LLM calls', m.llm_calls], ['tool calls', m.tool_calls],
+    ['interrupts', m.interrupts], ['invoke()', m.invocations],
+    ['wall clock', m.duration_s != null ? m.duration_s + 's' : null],
+    ['tokens', m.tokens ? `${m.tokens.input} in / ${m.tokens.output} out` : null],
+    ['captured', m.captured_at],
+  ].filter(([, v]) => v != null && v !== '')
+   .map(([k, v]) => `<span>${k}: <b>${esc(String(v))}</b></span>`).join('');
+
+  const tabs = groups.map((t, i) => `
+    <button class="stab ${i === activeTurn ? 'on' : ''}" data-turn="${i}" title="${esc(t.query)}">
+      <span class="sn">${t.n}</span><span class="sq">${esc(t.query)}</span>
+    </button>`).join('');
+
+  root.innerHTML = `
+    <h1>Prompt Trace</h1>
+    <div class="metabar">${meta}</div>
+
+    <div class="subtabs"><div class="stwrap">${tabs}</div></div>
+
+    <div class="turnhead"><q>${esc(g.query || '')}</q></div>
+
+    ${renderEvents(g.events)}
+
+    <div class="srcbar" style="margin-top:26px">
+      <label class="up">replace trace.json<input type="file" accept=".json,application/json" id="tracefile"></label>
+      ${captureName ? `<span class="fname">${esc(captureName)}</span>` : ''}
+      ${captureName && captureName !== 'built in' ? `<button class="clear" id="traceclear">✕ use the built-in capture</button>` : ''}
+      <span class="hint">drop another trace.json anywhere on this tab</span>
+    </div>
+    <div class="howto"><pre>${esc(CAPTURE_CMD)}</pre></div>`;
+
+  wireTrace();
+}
+
+function wireTrace(){
+  const root = document.getElementById('traceroot');
+  root.querySelectorAll('.srcbtn[data-pref]').forEach(b => {
+    b.onclick = () => openSource(PANE_REFS[b.dataset.pref]);
+  });
+  root.querySelectorAll('.stab').forEach(b => {
+    b.onclick = () => {
+      activeTurn = +b.dataset.turn;
+      renderTrace();
+      document.getElementById('view-trace').scrollTop = 0;
+    };
+  });
+  const file = document.getElementById('tracefile');
+  if(file) file.onchange = () => file.files[0] && loadCapture(file.files[0]);
+  const clear = document.getElementById('traceclear');
+  if(clear) clear.onclick = () => {
+    try { localStorage.removeItem('axiomcart.trace'); } catch(e){}
+    location.reload();
+  };
+}
+
+function loadCapture(f){
+  const rd = new FileReader();
+  rd.onload = () => {
+    let payload;
+    try { payload = JSON.parse(rd.result); }
+    catch(err){ alert('Could not parse that file as JSON: ' + err.message); return; }
+    if(!payload || !Array.isArray(payload.events)){
+      alert('That JSON has no "events" array — expected the output of src/trace_capture.py.');
+      return;
+    }
+    capture = payload; captureName = f.name; activeTurn = 0;
+    try { localStorage.setItem('axiomcart.trace', JSON.stringify({name:f.name, payload})); } catch(e){}
+    renderTrace();
+    document.getElementById('view-trace').scrollTop = 0;
+  };
+  rd.readAsText(f);
+}
+
+/* drop a trace.json anywhere on the trace tab */
+(() => {
+  const z = document.getElementById('view-trace');
+  const stop = e => { e.preventDefault(); e.stopPropagation(); };
+  z.addEventListener('dragover', e => { stop(e); z.classList.add('dropping'); });
+  z.addEventListener('dragleave', e => { stop(e); z.classList.remove('dropping'); });
+  z.addEventListener('drop', e => {
+    stop(e); z.classList.remove('dropping');
+    const f = e.dataTransfer.files[0];
+    if(f) loadCapture(f);
+  });
+})();
+
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+let view = 'exec';
+function setView(v){
+  view = v;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.view === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'view-' + v));
+  if(location.hash.slice(1) !== v) history.replaceState(null, '', '#' + v);
+}
+const VIEWS = ['exec', 'trace', 'data'];
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => setView(t.dataset.view));
+window.addEventListener('hashchange', () => {
+  const v = location.hash.slice(1);
+  if(VIEWS.includes(v) && v !== view) setView(v);
+});
+
+renderData();
+renderTrace();
+setView(VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'exec');
+</script>
+</body>
+</html>
