@@ -39,7 +39,7 @@ START → orchestrator ─┬─ product_agent ──→ synthesizer → END
 | **RAG product search** | Product catalog is embedded into a vector store; the product agent performs similarity search to find relevant items. |
 | **Order tracking** | Orders are looked up by ID (e.g. `ORD101`) or customer email from the order database. |
 | **Conversation memory** | A `MemorySaver` checkpointer persists state across turns, so multi-turn conversations "just work". |
-| **Human escalation** | Creates a support ticket with priority levels and (optionally) sends an email notification via Resend. |
+| **Human escalation** | Creates a support ticket with priority levels in an in-memory escalation queue. |
 | **Voice I/O** | Microphone input + OpenAI TTS output for a fully spoken conversational experience. |
 | **Response synthesis** | When both agents contribute, an LLM merges the results into a single, natural reply. |
 

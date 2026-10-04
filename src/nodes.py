@@ -15,9 +15,9 @@ Key concepts:
   • Tool nodes: tools are separate graph nodes, not manual loops.
     LangGraph controls the model ⇄ tools cycle natively.
   • Parallel dispatch via Send()
-  • HITL via conversation persistence — if an agent needs info
-    (e.g. order ID), it simply asks. The answer arrives on the
-    next turn with full conversation history.
+  • HITL via interrupt() — if the support agent needs info
+    (e.g. order ID), it pauses the graph and asks. The caller
+    resumes it with Command(resume=answer).
   • Response synthesis for multi-agent queries
 """
 
@@ -72,7 +72,7 @@ ROLE: Handle order enquiries and escalate issues to human agents.
 
 TOOLS:
   get_order_status   – look up an order by order ID or customer email
-  escalate_to_human  – create a ticket for human support (sends email notification)
+  escalate_to_human  – create a ticket for human support
 
 POLICIES:
 {SUPPORT_POLICIES}
@@ -315,9 +315,9 @@ def product_agent(state: WorkerInput) -> Command[Literal["synthesizer"]]:
 def support_agent(state: WorkerInput) -> Command[Literal["synthesizer"]]:
     """Run the sales-support agent via its model ⇄ tools subgraph.
 
-    HITL is handled through conversation persistence: if the agent
-    needs info (e.g. order ID), it responds with a question. The
-    user's answer arrives on the next turn via the message history.
+    HITL is handled by interrupt() inside support_model: if the agent
+    needs info (e.g. order ID), the graph pauses with its question and
+    resumes in this same turn once the caller supplies the answer.
     """
     user_query = state.get("user_query", "")
     task_desc  = state.get("task_description", user_query)

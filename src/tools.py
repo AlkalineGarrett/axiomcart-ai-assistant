@@ -6,7 +6,7 @@ Product Discovery (1 tool):
 
 Sales Support (2 tools):
   • get_order_status        – order lookup by ID or email
-  • escalate_to_human       – HITL ticket + optional email via Resend
+  • escalate_to_human       – support ticket for a human agent
 """
 
 from __future__ import annotations
@@ -110,8 +110,8 @@ def get_order_status(identifier: str) -> str:
 @tool
 def escalate_to_human(order_id: str, issue_summary: str, priority: str = "normal") -> str:
     """Escalate to a human support agent. Customer details are pulled
-    from the order database. An email notification is sent if Resend
-    is configured.
+    from the order database. The ticket is queued for the support
+    team; no email is sent.
 
     Args:
         order_id:      the related order (e.g. "ORD101")
