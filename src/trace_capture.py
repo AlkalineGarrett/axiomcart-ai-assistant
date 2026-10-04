@@ -21,9 +21,11 @@ the graph, so what gets recorded is the real run, not a simulation.
 
 Two details worth knowing when you read the output:
 
-  • The support agent's pre-interrupt model call appears twice. Resuming
-    re-enters the node from the top, so everything above interrupt() runs
-    again. The first interrupt event is marked "raised": true.
+  • Each HITL question records two interrupt events. Resuming re-runs
+    the ask_user node from the top, so interrupt() is called again and
+    this time returns the answer. The first event is marked "raised": true.
+    (Traces captured before ask_user existed also show the support model
+    call twice — it shared a node with interrupt() and re-ran on resume.)
   • Structured-output calls (the orchestrator's classifier) report no
     token usage — LangChain hands back the parsed Pydantic object and
     drops the raw response that carries usage_metadata.

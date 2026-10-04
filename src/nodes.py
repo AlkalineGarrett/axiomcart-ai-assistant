@@ -11,13 +11,18 @@ Architecture:
     START → model ─┬─ tools → model (loop back)
                    └─ END    (no tool calls → done)
 
+  The support subgraph adds an ask_user node for HITL:
+    START → model ─┬─ tools    → model
+                   ├─ ask_user → model   (asks before any tool ran)
+                   └─ END
+
 Key concepts:
   • Tool nodes: tools are separate graph nodes, not manual loops.
     LangGraph controls the model ⇄ tools cycle natively.
   • Parallel dispatch via Send()
   • HITL via interrupt() — if the support agent needs info
-    (e.g. order ID), it pauses the graph and asks. The caller
-    resumes it with Command(resume=answer).
+    (e.g. order ID), its ask_user node pauses the graph and asks.
+    The caller resumes it with Command(resume=answer).
   • Response synthesis for multi-agent queries
 """
 
@@ -151,22 +156,23 @@ product_subgraph = pb.compile()
 # ── Support subgraph ─────────────────────────────────────────
 
 def support_model(state: AgentState) -> dict:
-    """Call the support LLM. If it asks for info without calling tools,
-    use interrupt() to pause the graph and collect user input."""
+    """Call the support LLM (with tools bound)."""
     response = sales_llm.invoke(state["messages"])
     logger.info("[support:model] tool_calls=%s", bool(response.tool_calls))
-
-    # If no tool calls and no tools have been called yet,
-    # the agent is asking for missing info — interrupt for HITL
-    if not response.tool_calls:
-        any_tools_called = any(isinstance(m, ToolMessage) for m in state["messages"])
-        if not any_tools_called:
-            logger.info("[support:model] HITL: interrupting to collect user info")
-            user_reply = interrupt(response.content)
-            logger.info("[support:model] HITL: user replied %r", user_reply)
-            return {"messages": [response, HumanMessage(content=str(user_reply))]}
-
     return {"messages": [response]}
+
+
+def ask_user(state: AgentState) -> dict:
+    """HITL: pause the graph with the agent's question, resume with the answer.
+
+    Resuming re-runs the interrupted node from the top, so this node holds
+    nothing but the interrupt() — the LLM call that wrote the question
+    already finished in support_model and is not repeated."""
+    question = state["messages"][-1].content
+    logger.info("[support:ask_user] HITL: interrupting to collect user info")
+    user_reply = interrupt(question)
+    logger.info("[support:ask_user] HITL: user replied %r", user_reply)
+    return {"messages": [HumanMessage(content=str(user_reply))]}
 
 
 def support_tools_node(state: AgentState) -> dict:
@@ -182,22 +188,25 @@ def support_tools_node(state: AgentState) -> dict:
 
 
 def support_should_continue(state: AgentState) -> str:
-    """Route after support model node. If the last message is a
-    HumanMessage (user answered via HITL interrupt), loop back to model."""
+    """Route after support model node: tool_calls → tools; a reply before
+    any tool has run means the agent is asking for missing info → ask_user;
+    otherwise → END."""
     last = state["messages"][-1]
-    if isinstance(last, HumanMessage):
-        return "model"
     if hasattr(last, "tool_calls") and last.tool_calls:
         return "tools"
+    if not any(isinstance(m, ToolMessage) for m in state["messages"]):
+        return "ask_user"
     return END
 
 
 sb = StateGraph(AgentState)
 sb.add_node("model", support_model)
 sb.add_node("tools", support_tools_node)
+sb.add_node("ask_user", ask_user)
 sb.add_edge(START, "model")
 sb.add_conditional_edges("model", support_should_continue)
 sb.add_edge("tools", "model")
+sb.add_edge("ask_user", "model")
 support_subgraph = sb.compile()
 
 
@@ -315,7 +324,7 @@ def product_agent(state: WorkerInput) -> Command[Literal["synthesizer"]]:
 def support_agent(state: WorkerInput) -> Command[Literal["synthesizer"]]:
     """Run the sales-support agent via its model ⇄ tools subgraph.
 
-    HITL is handled by interrupt() inside support_model: if the agent
+    HITL is handled by interrupt() in the ask_user node: if the agent
     needs info (e.g. order ID), the graph pauses with its question and
     resumes in this same turn once the caller supplies the answer.
     """

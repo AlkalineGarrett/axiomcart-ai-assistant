@@ -85,8 +85,9 @@ Here's what happens when a user sends _"My order is delayed and I want to see so
    │
    └─▶ support_agent
         • Injects SUPPORT_PROMPT as system message
-        • Runs support_subgraph (model ⇄ tools loop):
-            model → no tool calls (needs order ID) → interrupt()
+        • Runs support_subgraph (model ⇄ tools loop + ask_user):
+            model → no tool calls (needs order ID)
+            ask_user → interrupt()
             ← HITL: user is asked "Could you provide your order ID?"
             → user responds "ORD102"
             model → calls get_order_status("ORD102")
@@ -240,7 +241,7 @@ Assistant: Your order ORD101 for the Air Jordan 1 Retro High OG is shipped!
   Estimated delivery: Feb 13, 2026.
 ```
 
-The graph literally **pauses** at the `interrupt()` call inside the support subgraph, prompts you for the missing info, then **resumes** from exactly where it left off.
+The graph literally **pauses** at the `interrupt()` call in the support subgraph's `ask_user` node, prompts you for the missing info, then **resumes** there with your answer.
 
 ### Mixed Query (Both Agents + Synthesis)
 
@@ -306,11 +307,13 @@ The graph is compiled with `MemorySaver`, and every invocation uses a consistent
 
 When the support agent's LLM responds without making any tool calls and no tools have been called yet in the subgraph, it's inferred that the agent is asking the user for missing information. The flow:
 
-1. `support_model()` detects no tool calls + no prior `ToolMessage` in state.
-2. Calls `interrupt(response.content)` — this pauses the **entire graph**.
+1. `support_should_continue()` sees no tool calls and no prior `ToolMessage` in state, and routes to the `ask_user` node.
+2. `ask_user()` calls `interrupt(question)` — this pauses the **entire graph**.
 3. The interrupt surfaces in the `__interrupt__` key of the result dict.
 4. `AxiomCartAssistant.query()` detects the interrupt, prompts the user (text or voice), and calls `invoke(Command(resume=user_answer))`.
-5. The graph resumes inside `support_model()`, which appends the user's answer as a `HumanMessage` and loops back for another LLM call — this time with enough context to call the right tool.
+5. The graph resumes by re-running `ask_user()` from the top; this time `interrupt()` returns the answer, which is appended as a `HumanMessage` before looping back to `model` — now with enough context to call the right tool.
+
+The interrupt lives in its own node on purpose. Resuming re-runs the interrupted node from the top, and a node's output is only saved when it finishes — so if the LLM call and `interrupt()` shared a node, every resume would repeat the LLM call. Split this way, `support_model` has already finished and been checkpointed, and only the cheap `interrupt()` runs again.
 
 ---
 
