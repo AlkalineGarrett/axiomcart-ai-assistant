@@ -127,7 +127,7 @@ def product_model(state: AgentState) -> dict:
     return {"messages": [response]}
 
 
-def product_tools(state: AgentState) -> dict:
+def product_tools_node(state: AgentState) -> dict:
     """Execute tool calls from the product LLM."""
     last = state["messages"][-1]
     results = []
@@ -141,7 +141,7 @@ def product_tools(state: AgentState) -> dict:
 
 pb = StateGraph(AgentState)
 pb.add_node("model", product_model)
-pb.add_node("tools", product_tools)
+pb.add_node("tools", product_tools_node)
 pb.add_edge(START, "model")
 pb.add_conditional_edges("model", should_continue)
 pb.add_edge("tools", "model")
@@ -169,7 +169,7 @@ def support_model(state: AgentState) -> dict:
     return {"messages": [response]}
 
 
-def support_tools(state: AgentState) -> dict:
+def support_tools_node(state: AgentState) -> dict:
     """Execute tool calls from the support LLM."""
     last = state["messages"][-1]
     results = []
@@ -194,7 +194,7 @@ def support_should_continue(state: AgentState) -> str:
 
 sb = StateGraph(AgentState)
 sb.add_node("model", support_model)
-sb.add_node("tools", support_tools)
+sb.add_node("tools", support_tools_node)
 sb.add_edge(START, "model")
 sb.add_conditional_edges("model", support_should_continue)
 sb.add_edge("tools", "model")
