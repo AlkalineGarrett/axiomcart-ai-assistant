@@ -968,11 +968,31 @@ function highlight(path){
 /* ── Shared code pane ─────────────────────────────────────── */
 const codepane = document.getElementById('codepane');
 
-function closeCode(){
-  codepane.hidden = true;
+/* What the pane shows lives in history.state — {step, k} for a Graph
+   Execution step, {refs, k} for any other source chip — so opening,
+   switching and closing it are all steps the back button can undo. */
+let pane = null;
+
+function renderPane(p){
   block.querySelectorAll('.dl.on').forEach(e => e.classList.remove('on'));
   current = -1;
+  if(!p){ codepane.hidden = true; return; }
+  if(p.step != null){
+    block.querySelector(`.dl[data-i="${p.step}"]`).classList.add('on');
+    current = p.step;
+    showRefs(stepRefs(p.step), p.k);
+  } else {
+    showRefs(p.refs, p.k);
+  }
 }
+
+function openPane(p, push){
+  pane = p;
+  renderPane(p);
+  history[push ? 'pushState' : 'replaceState']({pane: p}, '', location.hash);
+}
+
+function closeCode(){ openPane(null, true); }
 document.getElementById('codeclose').onclick = closeCode;
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape' && !codepane.hidden) closeCode();
@@ -997,7 +1017,7 @@ function showRefs(refs, k){
       const b = document.createElement('button');
       b.textContent = r.label || `${r.f.replace('src/','')}:${r.r[0][0]}`;
       if(j === k) b.className = 'act';
-      else b.onclick = () => showRefs(refs, j);
+      else b.onclick = () => openPane({...pane, k: j}, true);
       alsoEl.appendChild(b);
     });
   }
@@ -1039,19 +1059,21 @@ STEPS.forEach((s, i) => {
     tag.className = 'tag';
     tag.textContent = `${s.f.replace('src/','')}:${s.r[0][0]}`;
     el.appendChild(tag);
-    el.onclick = () => select(i);
+    el.onclick = () => select(i, true);
   }
   block.appendChild(el);
 });
 
-function select(i){
+function stepRefs(i){
+  const s = STEPS[i];
+  const primary = {label:`${s.f.replace('src/','')}:${s.r[0][0]}`, f:s.f, r:s.r, n:s.n};
+  return [primary, ...(s.also || [])];
+}
+
+function select(i, push){
   const s = STEPS[i];
   if(!s || !s.f) return;
-  block.querySelectorAll('.dl.on').forEach(e => e.classList.remove('on'));
-  block.querySelector(`.dl[data-i="${i}"]`).classList.add('on');
-  current = i;
-  const primary = {label:`${s.f.replace('src/','')}:${s.r[0][0]}`, f:s.f, r:s.r, n:s.n};
-  showRefs([primary, ...(s.also || [])], 0);
+  openPane({step: i, k: 0}, push);
 }
 
 document.addEventListener('keydown', e => {
@@ -1064,7 +1086,8 @@ document.addEventListener('keydown', e => {
     if(i < 0 || i >= STEPS.length) return;
     if(STEPS[i].f){
       e.preventDefault();
-      select(i);
+      // arrowing through steps rewrites one entry; only opening the pane adds one
+      select(i, codepane.hidden);
       block.querySelector(`.dl[data-i="${i}"]`).scrollIntoView({block:'nearest'});
       return;
     }
@@ -1203,9 +1226,7 @@ function renderData(){
 
 /* Open the code pane beside whatever tab is showing — no tab switch. */
 function openSource(ref){
-  block.querySelectorAll('.dl.on').forEach(e => e.classList.remove('on'));
-  current = -1;
-  showRefs([{label: `${ref.f.replace('src/','')}:${ref.r[0][0]}`, ...ref}], 0);
+  openPane({refs: [{label: `${ref.f.replace('src/','')}:${ref.r[0][0]}`, ...ref}], k: 0}, true);
 }
 
 /* ══ Prompt Trace — one real captured run ════════════════════
@@ -1682,11 +1703,7 @@ function wireTrace(){
     b.onclick = () => openSource(PANE_REFS[b.dataset.pref]);
   });
   root.querySelectorAll('.stab').forEach(b => {
-    b.onclick = () => {
-      activeTurn = +b.dataset.turn;
-      renderTrace();
-      document.getElementById('view-trace').scrollTop = 0;
-    };
+    b.onclick = () => navigate(`trace/${+b.dataset.turn + 1}`);
   });
   const file = document.getElementById('tracefile');
   if(file) file.onchange = () => file.files[0] && loadCapture(file.files[0]);
@@ -1711,6 +1728,8 @@ function loadCapture(f){
     try { localStorage.setItem('axiomcart.trace', JSON.stringify({name:f.name, payload})); } catch(e){}
     renderTrace();
     document.getElementById('view-trace').scrollTop = 0;
+    // a new capture starts on its first turn; don't leave #trace/N pointing past it
+    history.replaceState(history.state, '', '#' + hashFor('trace'));
   };
   rd.readAsText(f);
 }
@@ -1842,29 +1861,72 @@ function renderLang(){
     b.onclick = () => openSource(PANE_REFS[b.dataset.pref]);
   });
   root.querySelectorAll('.stab[data-lang]').forEach(b => {
-    b.onclick = () => { langTab = b.dataset.lang; renderLang(); document.getElementById('view-lang').scrollTop = 0; };
+    b.onclick = () => navigate(`lang/${b.dataset.lang}`);
   });
 }
 
-/* ── Tabs ─────────────────────────────────────────────────── */
+/* ── Tabs + history ───────────────────────────────────────────
+   The hash holds the tab and its sub-tab — #exec, #data, #trace/2,
+   #lang/reducers — so every tab click is a history entry and the
+   back button walks through them. ───────────────────────────── */
 let view = 'exec';
+const VIEWS = ['exec', 'trace', 'data', 'lang'];
+
 function setView(v){
   view = v;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.view === v));
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'view-' + v));
-  if(location.hash.slice(1) !== v) history.replaceState(null, '', '#' + v);
 }
-const VIEWS = ['exec', 'trace', 'data', 'lang'];
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => setView(t.dataset.view));
-window.addEventListener('hashchange', () => {
-  const v = location.hash.slice(1);
-  if(VIEWS.includes(v) && v !== view) setView(v);
-});
+
+function hashFor(v){
+  if(v === 'trace') return `trace/${activeTurn + 1}`;
+  if(v === 'lang') return `lang/${langTab}`;
+  return v;
+}
+
+/* Apply whatever the hash and history.state say. Idempotent: popstate and
+   hashchange can both fire for one step. */
+function route(){
+  let [v, sub] = location.hash.slice(1).split('/');
+  if(!VIEWS.includes(v)){ v = 'exec'; history.replaceState(history.state, '', '#' + hashFor('exec')); }
+
+  if(v === 'trace'){
+    const t = Math.max(0, (parseInt(sub, 10) || 1) - 1);
+    if(t !== activeTurn){
+      activeTurn = t;
+      renderTrace();
+      document.getElementById('view-trace').scrollTop = 0;
+    }
+    // renderTrace clamps a turn past the end back to 0 — make the hash agree
+    if(t !== activeTurn) history.replaceState(history.state, '', '#' + hashFor('trace'));
+  }
+  if(v === 'lang'){
+    const k = LANG[sub] ? sub : 'reducers';
+    if(k !== langTab){
+      langTab = k;
+      renderLang();
+      document.getElementById('view-lang').scrollTop = 0;
+    }
+  }
+  if(v !== view) setView(v);
+
+  const p = (history.state && history.state.pane) || null;
+  if(JSON.stringify(p) !== JSON.stringify(pane)){ pane = p; renderPane(p); }
+}
+
+function navigate(hash){
+  if(location.hash.slice(1) !== hash) history.pushState({pane}, '', '#' + hash);
+  route();
+}
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => navigate(hashFor(t.dataset.view)));
+window.addEventListener('popstate', route);
+window.addEventListener('hashchange', route);
 
 renderData();
 renderTrace();
 renderLang();
-setView(VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'exec');
+route();
 </script>
 </body>
 </html>
