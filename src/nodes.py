@@ -37,7 +37,7 @@ from langgraph.types import Command, Send, interrupt
 
 from src.config import get_logger, llm
 from src.data import SUPPORT_POLICIES
-from src.state import AxiomCartState, ClassificationResult, WorkerInput
+from src.state import AgentTask, AxiomCartState, ClassificationResult, WorkerInput
 from src.tools import (
     escalate_to_human,
     get_order_status,
@@ -260,9 +260,9 @@ def orchestrator_node(state: AxiomCartState) -> Command[Literal["product_agent",
     try:
         classification = classifier.invoke(prompt)
     except Exception:
-        logger.exception("Classification failed — defaulting to support_agent")
+        logger.exception("Classification failed — defaulting to product_agent")
         classification = ClassificationResult(
-            tasks=[], requires_synthesis=False,
+            tasks=[AgentTask(agent="product_agent", task_description=user_query)], requires_synthesis=False,
             reasoning="Fallback: classification error",
         )
 
