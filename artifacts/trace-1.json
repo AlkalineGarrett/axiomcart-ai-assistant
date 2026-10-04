@@ -1,0 +1,791 @@
+{
+ "meta": {
+  "query": "My order is delayed and I want to see some headphones",
+  "answer": "Hello! This is AxiomCart Assistant. I apologize for the delay in your order for the Bose QuietComfort 45 Headphones (Order ID: ORD102), which is due to bad weather conditions in the transit region. The new estimated arrival date is February 15, 2026. We appreciate your patience and understanding.\n\nIn the meantime, if you're interested in exploring other headphone options, here are a few recommendations:\n\n1. **Bose QuietComfort 45 Headphones** - ₹10,199\n   - Features: Active Noise Cancellation, 24-hour battery life, Bluetooth 5.1\n   - Rating: 4.7/5\n\n2. **Sony WH-1000XM5 Headphones** - ₹12,999\n   - Features: Industry-leading ANC, 30-hour battery life, Speak-to-Chat\n   - Rating: 4.9/5\n\n3. **boAt Airdopes 141 TWS** - ₹1,299\n   - Features: 42-hour playback, ENx Technology, IPX4 water resistance\n   - Rating: 4.2/5\n\nIf you have any specific preferences or need further assistance, please let me know.",
+  "captured_at": "2026-08-15T17:45:57+00:00",
+  "model": "gpt-4o",
+  "temperature": 0.3,
+  "hitl_answers": [
+   "ORD102"
+  ],
+  "llm_calls": 8,
+  "tool_calls": 2,
+  "invocations": 2,
+  "interrupts": 2,
+  "duration_s": 14.27,
+  "tokens": {
+   "input": 0,
+   "output": 0
+  }
+ },
+ "events": [
+  {
+   "k": "invoke",
+   "kind": "start",
+   "input": {
+    "user_query": "My order is delayed and I want to see some headphones",
+    "messages": [
+     {
+      "role": "human",
+      "text": "My order is delayed and I want to see some headphones"
+     }
+    ]
+   },
+   "seq": 1,
+   "t": 0.0,
+   "secs": 8.141,
+   "interrupted": true
+  },
+  {
+   "k": "node",
+   "name": "orchestrator_node",
+   "phase": "enter",
+   "seq": 2,
+   "t": 0.005
+  },
+  {
+   "k": "llm",
+   "n": 1,
+   "node": "orchestrator_node",
+   "label": "llm",
+   "structured": true,
+   "sent": [
+    {
+     "role": "human",
+     "text": "Analyse this customer query and decide which agent(s) should handle it.\n\nQUERY: \"My order is delayed and I want to see some headphones\"\n\nAGENTS:\n  product_agent – product searches, recommendations, catalog questions,\n                  AND general conversation (greetings, thanks, chitchat)\n  support_agent   – order status, complaints, escalation to human support\n\nRULES:\n1. Greetings, chitchat, general questions (hi, hello, thanks, how are you)\n   → product_agent only\n2. Product-only queries  → product_agent only\n3. Order/support queries → support_agent only\n4. Mixed queries         → BOTH agents, requires_synthesis = true\n\nIMPORTANT: Only route to support_agent when the query clearly involves\nan order, complaint, or support issue. When in doubt, use product_agent.\n"
+    }
+   ],
+   "seq": 3,
+   "t": 0.006,
+   "secs": 2.207,
+   "out": {
+    "structured": {
+     "tasks": [
+      {
+       "agent": "support_agent",
+       "task_description": "Check the status of the delayed order and provide an update to the customer."
+      },
+      {
+       "agent": "product_agent",
+       "task_description": "Assist the customer in finding and recommending headphones from the product catalog."
+      }
+     ],
+     "requires_synthesis": true,
+     "reasoning": "The query involves both an order issue (delayed order) and a product interest (headphones). Therefore, it requires input from both the support_agent for the order status and the product_agent for product recommendations."
+    }
+   }
+  },
+  {
+   "k": "node",
+   "name": "orchestrator_node",
+   "phase": "exit",
+   "outcome": "ok",
+   "secs": 2.208,
+   "seq": 4,
+   "t": 2.213
+  },
+  {
+   "k": "node",
+   "name": "support_agent",
+   "phase": "enter",
+   "seq": 5,
+   "t": 2.214
+  },
+  {
+   "k": "node",
+   "name": "product_agent",
+   "phase": "enter",
+   "seq": 6,
+   "t": 2.215
+  },
+  {
+   "k": "llm",
+   "n": 2,
+   "node": "support_agent",
+   "label": "support_agent",
+   "structured": false,
+   "sent": [
+    {
+     "role": "system",
+     "text": "You are the Sales Support Agent for AxiomCart.\n\nROLE: Handle order enquiries and escalate issues to human agents.\n\nTOOLS:\n  get_order_status   – look up an order by order ID or customer email\n  escalate_to_human  – create a ticket for human support (sends email notification)\n\nPOLICIES:\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\nGUIDELINES:\n- If the customer has NOT provided an order ID or email, you MUST ask\n  for it before calling any tools. Say something like: \"Could you\n  please provide your order ID (e.g. ORD101) or registered email\n  address so I can look up your order?\"\n- Be empathetic and professional.\n- Only call escalate_to_human when the customer explicitly asks for\n  a human agent OR the issue cannot be resolved.\n- After retrieving information, respond directly to the customer.\n"
+    },
+    {
+     "role": "human",
+     "text": "CONVERSATION SO FAR:\nCustomer: My order is delayed and I want to see some headphones\n\nTask: Check the status of the delayed order and provide an update to the customer.\nCustomer query: My order is delayed and I want to see some headphones"
+    }
+   ],
+   "seq": 7,
+   "t": 2.216,
+   "secs": 1.036,
+   "out": {
+    "structured": {
+     "content": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order and provide an update on the status?",
+     "additional_kwargs": {
+      "refusal": null
+     },
+     "response_metadata": {
+      "token_usage": {
+       "completion_tokens": 34,
+       "prompt_tokens": 487,
+       "total_tokens": 521,
+       "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+       },
+       "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": null,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+       }
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-4o-2024-08-06",
+      "system_fingerprint": "fp_2fe17714a7",
+      "id": "chatcmpl-EDCjxQTOENti8blvw2FpIGwBWY0cq",
+      "service_tier": "default",
+      "finish_reason": "stop",
+      "logprobs": null
+     },
+     "type": "ai",
+     "name": null,
+     "id": "lc_run--01a00687-9934-7453-84c1-107cd8df059b-0",
+     "tool_calls": [],
+     "invalid_tool_calls": [],
+     "usage_metadata": {
+      "input_tokens": 487,
+      "output_tokens": 34,
+      "total_tokens": 521,
+      "input_token_details": {
+       "audio": 0,
+       "cache_read": 0
+      },
+      "output_token_details": {
+       "audio": 0,
+       "reasoning": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "k": "llm",
+   "n": 3,
+   "node": "product_agent",
+   "label": "product_agent",
+   "structured": false,
+   "sent": [
+    {
+     "role": "system",
+     "text": "You are the Product Discovery Agent for AxiomCart.\n\nROLE: Help customers find and learn about products. You also handle\ngeneral conversation (greetings, thanks, chitchat).\n\nTOOLS:\n  search_product_catalog – semantic search over our product database\n\nGUIDELINES:\n- For greetings or general chat, respond warmly without calling tools.\n- For product questions, always search the catalog first.\n- Highlight key features and prices.\n- If a product is out of stock, suggest alternatives.\n- If the search returns products the customer has already seen or that\n  don't match what they asked for (wrong brand, wrong category, etc.),\n  be honest and say we don't currently carry what they're looking for.\n  Do NOT present irrelevant products as if they match the request.\n- Keep responses concise and helpful.\n"
+    },
+    {
+     "role": "human",
+     "text": "CONVERSATION SO FAR:\nCustomer: My order is delayed and I want to see some headphones\n\nTask: Assist the customer in finding and recommending headphones from the product catalog.\nCustomer query: My order is delayed and I want to see some headphones"
+    }
+   ],
+   "seq": 8,
+   "t": 2.218,
+   "secs": 1.03,
+   "out": {
+    "structured": {
+     "content": "",
+     "additional_kwargs": {
+      "refusal": null
+     },
+     "response_metadata": {
+      "token_usage": {
+       "completion_tokens": 16,
+       "prompt_tokens": 285,
+       "total_tokens": 301,
+       "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+       },
+       "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": null,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+       }
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-4o-2024-08-06",
+      "system_fingerprint": "fp_64d0f9e03c",
+      "id": "chatcmpl-EDCjx7ZS3Evy536dgHEOq40PFelRN",
+      "service_tier": "default",
+      "finish_reason": "tool_calls",
+      "logprobs": null
+     },
+     "type": "ai",
+     "name": null,
+     "id": "lc_run--01a00687-9936-75f3-8a63-3e57ca6b4382-0",
+     "tool_calls": [
+      {
+       "name": "search_product_catalog",
+       "args": {
+        "query": "headphones"
+       },
+       "id": "call_Svqiz63YhuiIYgQEXBxbyfFe",
+       "type": "tool_call"
+      }
+     ],
+     "invalid_tool_calls": [],
+     "usage_metadata": {
+      "input_tokens": 285,
+      "output_tokens": 16,
+      "total_tokens": 301,
+      "input_token_details": {
+       "audio": 0,
+       "cache_read": 0
+      },
+      "output_token_details": {
+       "audio": 0,
+       "reasoning": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "k": "tool",
+   "name": "search_product_catalog",
+   "node": "product_agent",
+   "args": {
+    "query": "headphones"
+   },
+   "seq": 9,
+   "t": 3.249,
+   "secs": 0.61,
+   "out": "Found the following products:\n\nProduct 1:\nProduct: Bose QuietComfort 45 Headphones\nBrand: Bose\nCategory: Electronics\nPrice: ₹10199\nRating: 4.7/5\nFeatures: Active Noise Cancellation, 24-hour battery, Bluetooth 5.1, USB-C charging\nDescription: Premium wireless noise-cancelling headphones with legendary Bose sound quality.\nColors: Black, White Smoke\nIn Stock: Yes\n\nProduct 2:\nProduct: Sony WH-1000XM5 Headphones\nBrand: Sony\nCategory: Electronics\nPrice: ₹12999\nRating: 4.9/5\nFeatures: Industry-leading ANC, 30-hour battery, Speak-to-Chat, LDAC Hi-Res Audio\nDescription: Sony's flagship noise-cancelling headphones with exceptional sound quality.\nColors: Black, Silver\nIn Stock: Yes\n\nProduct 3:\nProduct: boAt Airdopes 141 TWS\nBrand: boAt\nCategory: Electronics\nPrice: ₹1299\nRating: 4.2/5\nFeatures: 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\nDescription: True wireless earbuds with massive battery life and immersive sound.\nColors: Active Black, Bold Blue, Cherry Blossom\nIn Stock: Yes\n\n"
+  },
+  {
+   "k": "interrupt",
+   "node": "support_agent",
+   "question": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order and provide an update on the status?",
+   "seq": 10,
+   "t": 3.252,
+   "raised": true
+  },
+  {
+   "k": "node",
+   "name": "support_agent",
+   "phase": "exit",
+   "outcome": "interrupted",
+   "secs": 1.039,
+   "seq": 11,
+   "t": 3.253
+  },
+  {
+   "k": "llm",
+   "n": 4,
+   "node": "product_agent",
+   "label": "product_agent",
+   "structured": false,
+   "sent": [
+    {
+     "role": "system",
+     "text": "You are the Product Discovery Agent for AxiomCart.\n\nROLE: Help customers find and learn about products. You also handle\ngeneral conversation (greetings, thanks, chitchat).\n\nTOOLS:\n  search_product_catalog – semantic search over our product database\n\nGUIDELINES:\n- For greetings or general chat, respond warmly without calling tools.\n- For product questions, always search the catalog first.\n- Highlight key features and prices.\n- If a product is out of stock, suggest alternatives.\n- If the search returns products the customer has already seen or that\n  don't match what they asked for (wrong brand, wrong category, etc.),\n  be honest and say we don't currently carry what they're looking for.\n  Do NOT present irrelevant products as if they match the request.\n- Keep responses concise and helpful.\n"
+    },
+    {
+     "role": "human",
+     "text": "CONVERSATION SO FAR:\nCustomer: My order is delayed and I want to see some headphones\n\nTask: Assist the customer in finding and recommending headphones from the product catalog.\nCustomer query: My order is delayed and I want to see some headphones"
+    },
+    {
+     "role": "ai",
+     "text": "",
+     "tool_calls": [
+      {
+       "name": "search_product_catalog",
+       "args": {
+        "query": "headphones"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "text": "Found the following products:\n\nProduct 1:\nProduct: Bose QuietComfort 45 Headphones\nBrand: Bose\nCategory: Electronics\nPrice: ₹10199\nRating: 4.7/5\nFeatures: Active Noise Cancellation, 24-hour battery, Bluetooth 5.1, USB-C charging\nDescription: Premium wireless noise-cancelling headphones with legendary Bose sound quality.\nColors: Black, White Smoke\nIn Stock: Yes\n\nProduct 2:\nProduct: Sony WH-1000XM5 Headphones\nBrand: Sony\nCategory: Electronics\nPrice: ₹12999\nRating: 4.9/5\nFeatures: Industry-leading ANC, 30-hour battery, Speak-to-Chat, LDAC Hi-Res Audio\nDescription: Sony's flagship noise-cancelling headphones with exceptional sound quality.\nColors: Black, Silver\nIn Stock: Yes\n\nProduct 3:\nProduct: boAt Airdopes 141 TWS\nBrand: boAt\nCategory: Electronics\nPrice: ₹1299\nRating: 4.2/5\nFeatures: 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\nDescription: True wireless earbuds with massive battery life and immersive sound.\nColors: Active Black, Bold Blue, Cherry Blossom\nIn Stock: Yes\n\n",
+     "tool_call_id": "call_Svqiz63YhuiIYgQEXBxbyfFe"
+    }
+   ],
+   "seq": 12,
+   "t": 3.86,
+   "secs": 4.278,
+   "out": {
+    "structured": {
+     "content": "Here are some great headphone options for you:\n\n1. **Bose QuietComfort 45 Headphones**\n   - **Price:** ₹10,199\n   - **Features:** Active Noise Cancellation, 24-hour battery life, Bluetooth 5.1, USB-C charging\n   - **Rating:** 4.7/5\n   - **Colors:** Black, White Smoke\n   - **Description:** Premium wireless noise-cancelling headphones with legendary Bose sound quality.\n\n2. **Sony WH-1000XM5 Headphones**\n   - **Price:** ₹12,999\n   - **Features:** Industry-leading ANC, 30-hour battery life, Speak-to-Chat, LDAC Hi-Res Audio\n   - **Rating:** 4.9/5\n   - **Colors:** Black, Silver\n   - **Description:** Sony's flagship noise-cancelling headphones with exceptional sound quality.\n\n3. **boAt Airdopes 141 TWS**\n   - **Price:** ₹1,299\n   - **Features:** 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\n   - **Rating:** 4.2/5\n   - **Colors:** Active Black, Bold Blue, Cherry Blossom\n   - **Description:** True wireless earbuds with massive battery life and immersive sound.\n\nIf you have any specific preferences or need further assistance, feel free to let me know!",
+     "additional_kwargs": {
+      "refusal": null
+     },
+     "response_metadata": {
+      "token_usage": {
+       "completion_tokens": 293,
+       "prompt_tokens": 578,
+       "total_tokens": 871,
+       "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+       },
+       "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": null,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+       }
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-4o-2024-08-06",
+      "system_fingerprint": "fp_64d0f9e03c",
+      "id": "chatcmpl-EDCjyKw4iwKcsR7Iy1SCLhDFwFXCk",
+      "service_tier": "default",
+      "finish_reason": "stop",
+      "logprobs": null
+     },
+     "type": "ai",
+     "name": null,
+     "id": "lc_run--01a00687-9fa0-7d03-b06e-9ba509a78c97-0",
+     "tool_calls": [],
+     "invalid_tool_calls": [],
+     "usage_metadata": {
+      "input_tokens": 578,
+      "output_tokens": 293,
+      "total_tokens": 871,
+      "input_token_details": {
+       "audio": 0,
+       "cache_read": 0
+      },
+      "output_token_details": {
+       "audio": 0,
+       "reasoning": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "k": "node",
+   "name": "product_agent",
+   "phase": "exit",
+   "outcome": "ok",
+   "secs": 5.924,
+   "seq": 13,
+   "t": 8.139
+  },
+  {
+   "k": "invoke",
+   "kind": "resume",
+   "input": {
+    "resume": "ORD102"
+   },
+   "seq": 14,
+   "t": 8.142,
+   "secs": 6.125,
+   "interrupted": false
+  },
+  {
+   "k": "node",
+   "name": "support_agent",
+   "phase": "enter",
+   "seq": 15,
+   "t": 8.143
+  },
+  {
+   "k": "llm",
+   "n": 5,
+   "node": "support_agent",
+   "label": "support_agent",
+   "structured": false,
+   "sent": [
+    {
+     "role": "system",
+     "text": "You are the Sales Support Agent for AxiomCart.\n\nROLE: Handle order enquiries and escalate issues to human agents.\n\nTOOLS:\n  get_order_status   – look up an order by order ID or customer email\n  escalate_to_human  – create a ticket for human support (sends email notification)\n\nPOLICIES:\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\nGUIDELINES:\n- If the customer has NOT provided an order ID or email, you MUST ask\n  for it before calling any tools. Say something like: \"Could you\n  please provide your order ID (e.g. ORD101) or registered email\n  address so I can look up your order?\"\n- Be empathetic and professional.\n- Only call escalate_to_human when the customer explicitly asks for\n  a human agent OR the issue cannot be resolved.\n- After retrieving information, respond directly to the customer.\n"
+    },
+    {
+     "role": "human",
+     "text": "CONVERSATION SO FAR:\nCustomer: My order is delayed and I want to see some headphones\n\nTask: Check the status of the delayed order and provide an update to the customer.\nCustomer query: My order is delayed and I want to see some headphones"
+    }
+   ],
+   "seq": 16,
+   "t": 8.144,
+   "secs": 0.984,
+   "out": {
+    "structured": {
+     "content": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order and provide you with an update?",
+     "additional_kwargs": {
+      "refusal": null
+     },
+     "response_metadata": {
+      "token_usage": {
+       "completion_tokens": 33,
+       "prompt_tokens": 487,
+       "total_tokens": 520,
+       "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+       },
+       "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": null,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+       }
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-4o-2024-08-06",
+      "system_fingerprint": "fp_2fe17714a7",
+      "id": "chatcmpl-EDCk37QDjdoRBMPd3mY1NAUpusgX5",
+      "service_tier": "default",
+      "finish_reason": "stop",
+      "logprobs": null
+     },
+     "type": "ai",
+     "name": null,
+     "id": "lc_run--01a00687-b05c-7481-82a9-20128a536a57-0",
+     "tool_calls": [],
+     "invalid_tool_calls": [],
+     "usage_metadata": {
+      "input_tokens": 487,
+      "output_tokens": 33,
+      "total_tokens": 520,
+      "input_token_details": {
+       "audio": 0,
+       "cache_read": 0
+      },
+      "output_token_details": {
+       "audio": 0,
+       "reasoning": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "k": "interrupt",
+   "node": "support_agent",
+   "question": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order and provide you with an update?",
+   "seq": 17,
+   "t": 9.128,
+   "answer": "ORD102"
+  },
+  {
+   "k": "llm",
+   "n": 6,
+   "node": "support_agent",
+   "label": "support_agent",
+   "structured": false,
+   "sent": [
+    {
+     "role": "system",
+     "text": "You are the Sales Support Agent for AxiomCart.\n\nROLE: Handle order enquiries and escalate issues to human agents.\n\nTOOLS:\n  get_order_status   – look up an order by order ID or customer email\n  escalate_to_human  – create a ticket for human support (sends email notification)\n\nPOLICIES:\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\nGUIDELINES:\n- If the customer has NOT provided an order ID or email, you MUST ask\n  for it before calling any tools. Say something like: \"Could you\n  please provide your order ID (e.g. ORD101) or registered email\n  address so I can look up your order?\"\n- Be empathetic and professional.\n- Only call escalate_to_human when the customer explicitly asks for\n  a human agent OR the issue cannot be resolved.\n- After retrieving information, respond directly to the customer.\n"
+    },
+    {
+     "role": "human",
+     "text": "CONVERSATION SO FAR:\nCustomer: My order is delayed and I want to see some headphones\n\nTask: Check the status of the delayed order and provide an update to the customer.\nCustomer query: My order is delayed and I want to see some headphones"
+    },
+    {
+     "role": "ai",
+     "text": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order and provide you with an update?"
+    },
+    {
+     "role": "human",
+     "text": "ORD102"
+    }
+   ],
+   "seq": 18,
+   "t": 9.13,
+   "secs": 0.94,
+   "out": {
+    "structured": {
+     "content": "",
+     "additional_kwargs": {
+      "refusal": null
+     },
+     "response_metadata": {
+      "token_usage": {
+       "completion_tokens": 16,
+       "prompt_tokens": 529,
+       "total_tokens": 545,
+       "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+       },
+       "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": null,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+       }
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-4o-2024-08-06",
+      "system_fingerprint": "fp_2fe17714a7",
+      "id": "chatcmpl-EDCk4qBDCfmdirtVHVt3eARthPBpj",
+      "service_tier": "default",
+      "finish_reason": "tool_calls",
+      "logprobs": null
+     },
+     "type": "ai",
+     "name": null,
+     "id": "lc_run--01a00687-b436-7902-8a42-95e4ada1773b-0",
+     "tool_calls": [
+      {
+       "name": "get_order_status",
+       "args": {
+        "identifier": "ORD102"
+       },
+       "id": "call_2botHmj7ezwTpiiuykl3VlqP",
+       "type": "tool_call"
+      }
+     ],
+     "invalid_tool_calls": [],
+     "usage_metadata": {
+      "input_tokens": 529,
+      "output_tokens": 16,
+      "total_tokens": 545,
+      "input_token_details": {
+       "audio": 0,
+       "cache_read": 0
+      },
+      "output_token_details": {
+       "audio": 0,
+       "reasoning": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "k": "tool",
+   "name": "get_order_status",
+   "node": "support_agent",
+   "args": {
+    "identifier": "ORD102"
+   },
+   "seq": 19,
+   "t": 10.072,
+   "secs": 0.001,
+   "out": "Order ORD102:\n  Customer : Priya Patel (priya.patel@example.com)\n  Product  : Bose QuietComfort 45 Headphones\n  Price    : ₹10,199\n  Status   : Delayed\n  Ordered  : 2026-02-08\n  ETA      : 2026-02-15\n  Delay    : Bad weather conditions in transit region"
+  },
+  {
+   "k": "llm",
+   "n": 7,
+   "node": "support_agent",
+   "label": "support_agent",
+   "structured": false,
+   "sent": [
+    {
+     "role": "system",
+     "text": "You are the Sales Support Agent for AxiomCart.\n\nROLE: Handle order enquiries and escalate issues to human agents.\n\nTOOLS:\n  get_order_status   – look up an order by order ID or customer email\n  escalate_to_human  – create a ticket for human support (sends email notification)\n\nPOLICIES:\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\nGUIDELINES:\n- If the customer has NOT provided an order ID or email, you MUST ask\n  for it before calling any tools. Say something like: \"Could you\n  please provide your order ID (e.g. ORD101) or registered email\n  address so I can look up your order?\"\n- Be empathetic and professional.\n- Only call escalate_to_human when the customer explicitly asks for\n  a human agent OR the issue cannot be resolved.\n- After retrieving information, respond directly to the customer.\n"
+    },
+    {
+     "role": "human",
+     "text": "CONVERSATION SO FAR:\nCustomer: My order is delayed and I want to see some headphones\n\nTask: Check the status of the delayed order and provide an update to the customer.\nCustomer query: My order is delayed and I want to see some headphones"
+    },
+    {
+     "role": "ai",
+     "text": "Could you please provide your order ID (e.g. ORD101) or registered email address so I can look up your order and provide you with an update?"
+    },
+    {
+     "role": "human",
+     "text": "ORD102"
+    },
+    {
+     "role": "ai",
+     "text": "",
+     "tool_calls": [
+      {
+       "name": "get_order_status",
+       "args": {
+        "identifier": "ORD102"
+       }
+      }
+     ]
+    },
+    {
+     "role": "tool",
+     "text": "Order ORD102:\n  Customer : Priya Patel (priya.patel@example.com)\n  Product  : Bose QuietComfort 45 Headphones\n  Price    : ₹10,199\n  Status   : Delayed\n  Ordered  : 2026-02-08\n  ETA      : 2026-02-15\n  Delay    : Bad weather conditions in transit region",
+     "tool_call_id": "call_2botHmj7ezwTpiiuykl3VlqP"
+    }
+   ],
+   "seq": 20,
+   "t": 10.074,
+   "secs": 1.612,
+   "out": {
+    "structured": {
+     "content": "Your order for the Bose QuietComfort 45 Headphones (Order ID: ORD102) is currently delayed due to bad weather conditions in the transit region. The estimated arrival date is now February 15, 2026. We apologize for any inconvenience this may cause and appreciate your patience. If there's anything else I can assist you with, please let me know!",
+     "additional_kwargs": {
+      "refusal": null
+     },
+     "response_metadata": {
+      "token_usage": {
+       "completion_tokens": 74,
+       "prompt_tokens": 634,
+       "total_tokens": 708,
+       "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+       },
+       "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": null,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+       }
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-4o-2024-08-06",
+      "system_fingerprint": "fp_2fe17714a7",
+      "id": "chatcmpl-EDCk5ccKHe4IHTdceDOiyta2rx4hN",
+      "service_tier": "default",
+      "finish_reason": "stop",
+      "logprobs": null
+     },
+     "type": "ai",
+     "name": null,
+     "id": "lc_run--01a00687-b7e6-7ee2-82d2-6e620720f800-0",
+     "tool_calls": [],
+     "invalid_tool_calls": [],
+     "usage_metadata": {
+      "input_tokens": 634,
+      "output_tokens": 74,
+      "total_tokens": 708,
+      "input_token_details": {
+       "audio": 0,
+       "cache_read": 0
+      },
+      "output_token_details": {
+       "audio": 0,
+       "reasoning": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "k": "node",
+   "name": "support_agent",
+   "phase": "exit",
+   "outcome": "ok",
+   "secs": 3.544,
+   "seq": 21,
+   "t": 11.687
+  },
+  {
+   "k": "node",
+   "name": "synthesizer_node",
+   "phase": "enter",
+   "seq": 22,
+   "t": 11.688
+  },
+  {
+   "k": "llm",
+   "n": 8,
+   "node": "synthesizer_node",
+   "label": "llm",
+   "structured": false,
+   "sent": [
+    {
+     "role": "human",
+     "text": "You are combining responses from multiple specialist agents.\n\nCUSTOMER QUERY: My order is delayed and I want to see some headphones\n\nAGENT RESPONSES:\n[SALES_SUPPORT]:\nYour order for the Bose QuietComfort 45 Headphones (Order ID: ORD102) is currently delayed due to bad weather conditions in the transit region. The estimated arrival date is now February 15, 2026. We apologize for any inconvenience this may cause and appreciate your patience. If there's anything else I can assist you with, please let me know!\n\n[PRODUCT_DISCOVERY]:\nHere are some great headphone options for you:\n\n1. **Bose QuietComfort 45 Headphones**\n   - **Price:** ₹10,199\n   - **Features:** Active Noise Cancellation, 24-hour battery life, Bluetooth 5.1, USB-C charging\n   - **Rating:** 4.7/5\n   - **Colors:** Black, White Smoke\n   - **Description:** Premium wireless noise-cancelling headphones with legendary Bose sound quality.\n\n2. **Sony WH-1000XM5 Headphones**\n   - **Price:** ₹12,999\n   - **Features:** Industry-leading ANC, 30-hour battery life, Speak-to-Chat, LDAC Hi-Res Audio\n   - **Rating:** 4.9/5\n   - **Colors:** Black, Silver\n   - **Description:** Sony's flagship noise-cancelling headphones with exceptional sound quality.\n\n3. **boAt Airdopes 141 TWS**\n   - **Price:** ₹1,299\n   - **Features:** 42-hour playback, ENx Technology, IPX4 water resistance, BEAST Mode\n   - **Rating:** 4.2/5\n   - **Colors:** Active Black, Bold Blue, Cherry Blossom\n   - **Description:** True wireless earbuds with massive battery life and immersive sound.\n\nIf you have any specific preferences or need further assistance, feel free to let me know!\n\nWrite a single, coherent reply that addresses every part of the customer's query. Be concise. Speak as 'AxiomCart Assistant'."
+    }
+   ],
+   "seq": 23,
+   "t": 11.688,
+   "secs": 2.577,
+   "out": {
+    "structured": {
+     "content": "Hello! This is AxiomCart Assistant. I apologize for the delay in your order for the Bose QuietComfort 45 Headphones (Order ID: ORD102), which is due to bad weather conditions in the transit region. The new estimated arrival date is February 15, 2026. We appreciate your patience and understanding.\n\nIn the meantime, if you're interested in exploring other headphone options, here are a few recommendations:\n\n1. **Bose QuietComfort 45 Headphones** - ₹10,199\n   - Features: Active Noise Cancellation, 24-hour battery life, Bluetooth 5.1\n   - Rating: 4.7/5\n\n2. **Sony WH-1000XM5 Headphones** - ₹12,999\n   - Features: Industry-leading ANC, 30-hour battery life, Speak-to-Chat\n   - Rating: 4.9/5\n\n3. **boAt Airdopes 141 TWS** - ₹1,299\n   - Features: 42-hour playback, ENx Technology, IPX4 water resistance\n   - Rating: 4.2/5\n\nIf you have any specific preferences or need further assistance, please let me know.",
+     "additional_kwargs": {
+      "refusal": null
+     },
+     "response_metadata": {
+      "token_usage": {
+       "completion_tokens": 248,
+       "prompt_tokens": 439,
+       "total_tokens": 687,
+       "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+       },
+       "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": null,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+       }
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-4o-2024-08-06",
+      "system_fingerprint": "fp_e160a45017",
+      "id": "chatcmpl-EDCk6K0iGDqckI3tWJlpnVf4KsdST",
+      "service_tier": "default",
+      "finish_reason": "stop",
+      "logprobs": null
+     },
+     "type": "ai",
+     "name": null,
+     "id": "lc_run--01a00687-be34-7ec0-903d-88a631a3cdc8-0",
+     "tool_calls": [],
+     "invalid_tool_calls": [],
+     "usage_metadata": {
+      "input_tokens": 439,
+      "output_tokens": 248,
+      "total_tokens": 687,
+      "input_token_details": {
+       "audio": 0,
+       "cache_read": 0
+      },
+      "output_token_details": {
+       "audio": 0,
+       "reasoning": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "k": "node",
+   "name": "synthesizer_node",
+   "phase": "exit",
+   "outcome": "ok",
+   "secs": 2.577,
+   "seq": 24,
+   "t": 14.265
+  },
+  {
+   "k": "final",
+   "text": "Hello! This is AxiomCart Assistant. I apologize for the delay in your order for the Bose QuietComfort 45 Headphones (Order ID: ORD102), which is due to bad weather conditions in the transit region. The new estimated arrival date is February 15, 2026. We appreciate your patience and understanding.\n\nIn the meantime, if you're interested in exploring other headphone options, here are a few recommendations:\n\n1. **Bose QuietComfort 45 Headphones** - ₹10,199\n   - Features: Active Noise Cancellation, 24-hour battery life, Bluetooth 5.1\n   - Rating: 4.7/5\n\n2. **Sony WH-1000XM5 Headphones** - ₹12,999\n   - Features: Industry-leading ANC, 30-hour battery life, Speak-to-Chat\n   - Rating: 4.9/5\n\n3. **boAt Airdopes 141 TWS** - ₹1,299\n   - Features: 42-hour playback, ENx Technology, IPX4 water resistance\n   - Rating: 4.2/5\n\nIf you have any specific preferences or need further assistance, please let me know.",
+   "seq": 25,
+   "t": 14.267
+  }
+ ]
+}
