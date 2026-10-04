@@ -497,6 +497,75 @@
       position:sticky; bottom:0;
     }
   }
+  /* ── architecture diagram ───────────────────────── */
+  .diag{padding:26px var(--tp) 40px; max-width:1380px; margin:0 auto; container-type:inline-size}
+  .diag .lede{max-width:78ch}
+  .dg-wrap{display:grid; grid-template-columns:minmax(0,1fr); gap:18px; align-items:start}
+  .dg-canvas{
+    overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:var(--bg-alt);
+  }
+  .dg-canvas svg{display:block; width:100%; min-width:720px; max-width:1000px; height:auto; margin:0 auto}
+  .dg-panel{
+    position:sticky; bottom:0; max-height:34vh; overflow:auto;
+    border:1px solid var(--border); border-radius:10px; background:var(--bg);
+    padding:16px 18px; box-shadow:0 -6px 18px rgba(31,35,40,.07);
+  }
+  @container (min-width: 1040px){
+    .dg-wrap{grid-template-columns:minmax(0,1fr) 340px}
+    .dg-panel{top:16px; bottom:auto; max-height:calc(100vh - var(--hdr) - 32px); box-shadow:none}
+  }
+  .dg-panel h2{font-size:17px; margin:0; display:flex; align-items:center; gap:8px; letter-spacing:-.01em}
+  .dg-panel .kind{font:12px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--fg-dim); margin:3px 0 12px}
+  .dg-panel p{font-size:13.5px; line-height:1.6; margin:0 0 10px}
+  .dg-panel p code, .dg-panel li code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace}
+  .dg-panel h3{
+    font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.07em;
+    color:var(--fg-dim); margin:16px 0 7px;
+  }
+  .dg-panel .chips{display:flex; flex-wrap:wrap; gap:6px}
+  .dg-panel .links{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+  .dg-panel .links button{
+    appearance:none; width:100%; text-align:left; background:none; border:0; border-radius:7px;
+    padding:6px 8px; font:13px/1.4 inherit; color:var(--accent); cursor:pointer;
+  }
+  .dg-panel .links button:hover{background:var(--hover-bg)}
+  .dg-panel .links button:disabled{color:var(--fg-dim); cursor:default; background:none}
+  .dg-panel .links .where{
+    display:block; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--fg-dim);
+  }
+  .dg-panel .legend{list-style:none; margin:0; padding:0; font-size:13px; color:var(--fg-dim)}
+  .dg-panel .legend li{display:flex; align-items:center; gap:10px; margin:0 0 7px}
+  .dg-panel .legend svg{flex:0 0 auto}
+
+  .dg-node, .dg-cluster{cursor:pointer}
+  .dg-node:focus, .dg-cluster:focus{outline:none}
+  .dg-node rect{fill:var(--bg); stroke:#afb8c1; stroke-width:1.5}
+  .dg-node.tool rect{fill:#f6f8fa}
+  .dg-node.io rect{fill:#f5f0ff; stroke:#c4b1f0}
+  .dg-node.hitl rect{fill:#fff1ef; stroke:#f0a69e}
+  .dg-node.pill rect{fill:#eaeef2}
+  .dg-node:hover rect, .dg-node:focus-visible rect{stroke:var(--accent); stroke-width:2}
+  .dg-node.sel rect{fill:var(--sel-bg); stroke:var(--hl-bar); stroke-width:2.5}
+  .dg-t{font:600 14px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; fill:var(--fg)}
+  .dg-t.mono{font:600 13px ui-monospace,SFMono-Regular,Menlo,monospace}
+  .dg-s{font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; fill:var(--fg-dim)}
+  .dg-cluster > rect{stroke-width:1.5}
+  .dg-cluster.product > rect{fill:rgba(9,105,218,.045); stroke:#9cc3f5}
+  .dg-cluster.support > rect{fill:rgba(191,135,0,.06); stroke:#e3c06b}
+  .dg-cluster:hover > rect, .dg-cluster:focus-visible > rect{stroke:var(--accent)}
+  .dg-cluster.sel > rect{stroke:var(--hl-bar); stroke-width:2.5}
+  .dg-ct{font:700 13px ui-monospace,SFMono-Regular,Menlo,monospace; fill:var(--fg)}
+  .dg-cs{font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; fill:var(--fg-dim)}
+  .dg-frame{fill:none; stroke:#afb8c1; stroke-width:1.2; stroke-dasharray:2 4}
+  .dg-fl{font:12px ui-monospace,SFMono-Regular,Menlo,monospace; fill:var(--fg-dim)}
+  .dg-e{fill:none; stroke:#8c959f; stroke-width:1.6}
+  .dg-e.dash{stroke-dasharray:6 5}
+  .dg-e.hot{stroke:var(--accent); stroke-width:2.4}
+  .dg-l{
+    font:11.5px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; fill:var(--fg-dim);
+    paint-order:stroke; stroke:var(--bg-alt); stroke-width:5px; stroke-linejoin:round;
+  }
+  .dg-l.hot{fill:var(--accent)}
 </style>
 </head>
 <body>
@@ -507,6 +576,7 @@
     <button class="tab" data-view="trace">Prompt Trace</button>
     <button class="tab" data-view="data">Demo Data</button>
     <button class="tab" data-view="lang">LangGraph</button>
+    <button class="tab" data-view="diagram">Diagram</button>
   </nav>
 </header>
 
@@ -527,6 +597,10 @@
 
     <section class="view" id="view-data">
       <div class="data" id="dataroot"></div>
+    </section>
+
+    <section class="view" id="view-diagram">
+      <div class="diag" id="diagroot"></div>
     </section>
 
     <section class="view" id="view-lang">
@@ -771,7 +845,8 @@ const FILES = /*__FILES__*/{
 "src/data.py": "\"\"\"\nStatic data: Product catalog, order database, and support policies.\n\nIn production these would come from a real database. For the demo\nthey are plain Python structures so you can see everything at a glance.\n\"\"\"\n\nfrom __future__ import annotations\n\n# ── Product Catalog (used by RAG) ───────────────────────────\nPRODUCT_CATALOG: list[dict] = [\n    {\n        \"id\": \"PROD001\",\n        \"name\": \"Air Jordan 1 Retro High OG\",\n        \"category\": \"Footwear\",\n        \"brand\": \"Nike\",\n        \"price\": 8999,\n        \"rating\": 4.8,\n        \"features\": [\"Leather upper\", \"Air-Sole cushioning\", \"Rubber outsole\", \"Iconic colorway\"],\n        \"description\": \"Classic basketball sneaker with premium leather construction and legendary style.\",\n        \"in_stock\": True,\n        \"colors\": [\"Black/Red\", \"Chicago\", \"Royal Blue\"],\n    },\n    {\n        \"id\": \"PROD002\",\n        \"name\": \"Bose QuietComfort 45 Headphones\",\n        \"category\": \"Electronics\",\n        \"brand\": \"Bose\",\n        \"price\": 10199,\n        \"rating\": 4.7,\n        \"features\": [\"Active Noise Cancellation\", \"24-hour battery\", \"Bluetooth 5.1\", \"USB-C charging\"],\n        \"description\": \"Premium wireless noise-cancelling headphones with legendary Bose sound quality.\",\n        \"in_stock\": True,\n        \"colors\": [\"Black\", \"White Smoke\"],\n    },\n    {\n        \"id\": \"PROD003\",\n        \"name\": \"Sony WH-1000XM5 Headphones\",\n        \"category\": \"Electronics\",\n        \"brand\": \"Sony\",\n        \"price\": 12999,\n        \"rating\": 4.9,\n        \"features\": [\"Industry-leading ANC\", \"30-hour battery\", \"Speak-to-Chat\", \"LDAC Hi-Res Audio\"],\n        \"description\": \"Sony's flagship noise-cancelling headphones with exceptional sound quality.\",\n        \"in_stock\": True,\n        \"colors\": [\"Black\", \"Silver\"],\n    },\n    {\n        \"id\": \"PROD004\",\n        \"name\": \"Usha Maxx Air 400mm Table Fan\",\n        \"category\": \"Home Appliances\",\n        \"brand\": \"Usha\",\n        \"price\": 2700,\n        \"rating\": 4.3,\n        \"features\": [\"400mm sweep\", \"3-speed control\", \"Oscillation\", \"Low power consumption\"],\n        \"description\": \"Powerful table fan with superior air delivery and energy efficiency.\",\n        \"in_stock\": True,\n        \"colors\": [\"White\", \"Blue\"],\n    },\n    {\n        \"id\": \"PROD005\",\n        \"name\": \"iPhone 15 Pro Max\",\n        \"category\": \"Electronics\",\n        \"brand\": \"Apple\",\n        \"price\": 159900,\n        \"rating\": 4.8,\n        \"features\": [\"A17 Pro chip\", \"Titanium design\", \"48MP camera\", \"USB-C\", \"5x optical zoom\"],\n        \"description\": \"Apple's most advanced iPhone with titanium design and professional camera.\",\n        \"in_stock\": True,\n        \"colors\": [\"Natural Titanium\", \"Blue Titanium\", \"Black Titanium\"],\n    },\n    {\n        \"id\": \"PROD006\",\n        \"name\": \"Samsung Galaxy S24 Ultra\",\n        \"category\": \"Electronics\",\n        \"brand\": \"Samsung\",\n        \"price\": 134999,\n        \"rating\": 4.7,\n        \"features\": [\"Snapdragon 8 Gen 3\", \"200MP camera\", \"S Pen included\", \"Galaxy AI\"],\n        \"description\": \"Samsung's flagship smartphone with Galaxy AI and an exceptional camera system.\",\n        \"in_stock\": True,\n        \"colors\": [\"Titanium Gray\", \"Titanium Black\", \"Titanium Violet\"],\n    },\n    {\n        \"id\": \"PROD007\",\n        \"name\": \"MacBook Air M3 13-inch\",\n        \"category\": \"Electronics\",\n        \"brand\": \"Apple\",\n        \"price\": 114900,\n        \"rating\": 4.9,\n        \"features\": [\"M3 chip\", \"18-hour battery\", \"Liquid Retina display\", \"MagSafe charging\"],\n        \"description\": \"Supercharged by M3 chip with all-day battery life and a stunning display.\",\n        \"in_stock\": True,\n        \"colors\": [\"Midnight\", \"Starlight\", \"Space Gray\", \"Silver\"],\n    },\n    {\n        \"id\": \"PROD008\",\n        \"name\": \"boAt Airdopes 141 TWS\",\n        \"category\": \"Electronics\",\n        \"brand\": \"boAt\",\n        \"price\": 1299,\n        \"rating\": 4.2,\n        \"features\": [\"42-hour playback\", \"ENx Technology\", \"IPX4 water resistance\", \"BEAST Mode\"],\n        \"description\": \"True wireless earbuds with massive battery life and immersive sound.\",\n        \"in_stock\": True,\n        \"colors\": [\"Active Black\", \"Bold Blue\", \"Cherry Blossom\"],\n    },\n]\n\n\n# ── Order Database ───────────────────────────────────────────\nORDER_DATABASE: dict[str, dict] = {\n    \"ORD101\": {\n        \"product\": \"Air Jordan 1 Retro High OG\",\n        \"customer_name\": \"Rahul Sharma\",\n        \"customer_email\": \"rahul.sharma@example.com\",\n        \"status\": \"Shipped\",\n        \"price\": 8999,\n        \"order_date\": \"2026-02-10\",\n        \"estimated_delivery\": \"2026-02-13\",\n    },\n    \"ORD102\": {\n        \"product\": \"Bose QuietComfort 45 Headphones\",\n        \"customer_name\": \"Priya Patel\",\n        \"customer_email\": \"priya.patel@example.com\",\n        \"status\": \"Delayed\",\n        \"delay_reason\": \"Bad weather conditions in transit region\",\n        \"price\": 10199,\n        \"order_date\": \"2026-02-08\",\n        \"estimated_delivery\": \"2026-02-15\",\n    },\n    \"ORD103\": {\n        \"product\": \"Usha Maxx Air 400mm Table Fan\",\n        \"customer_name\": \"Amit Kumar\",\n        \"customer_email\": \"amit.kumar@example.com\",\n        \"status\": \"Processing\",\n        \"price\": 2700,\n        \"order_date\": \"2026-02-12\",\n        \"estimated_delivery\": \"2026-02-20\",\n    },\n    \"ORD104\": {\n        \"product\": \"iPhone 15 Pro Max\",\n        \"customer_name\": \"Vikram Singh\",\n        \"customer_email\": \"vikram.singh@example.com\",\n        \"status\": \"Ordered\",\n        \"price\": 159900,\n        \"order_date\": \"2026-02-13\",\n        \"estimated_delivery\": \"2026-02-17\",\n    },\n}\n\n# Mutable queue — filled at runtime by escalate_to_human tool\nESCALATION_QUEUE: list[dict] = []\n\n\n# ── Support Policies (injected into Support Agent prompt) ──────\nSUPPORT_POLICIES = \"\"\"\nSHIPPING OPTIONS:\n- Rocket (Same-day): ₹199, available before 1 PM in metro cities\n- Glide (3-4 days): ₹99, express delivery\n- Cruise (7-8 days): Free on orders over ₹500\n\nESCALATION CRITERIA:\n- Customer explicitly requests a human agent\n- Complaint involves safety or legal issues\n- Customer is highly frustrated or angry\n- Issue cannot be resolved with available tools\n\"\"\".strip()\n",
 "src/main.py": "\"\"\"\nAxiomCart Multi-Agent Voice System — main entry point.\n\nUsage:\n    uv run python -m src.main                # interactive text mode (default)\n    uv run python -m src.main --voice        # interactive voice mode (needs mic)\n    uv run python -m src.main --query \"...\"  # single text query\n\"\"\"\n\nfrom __future__ import annotations # for newer type hint syntax on older Python version (<3.10+)\n\nimport argparse\nimport uuid\n\nfrom langgraph.types import Command\n\nfrom langchain_core.messages import HumanMessage\n\nfrom src.config import get_logger\nfrom src.graph import axiomcart_graph\nfrom src.voice import VoiceRecorder, VoiceSpeaker\n\nlogger = get_logger(\"main\")\n\n\nclass AxiomCartAssistant:\n    \"\"\"Wraps the LangGraph multi-agent pipeline with optional voice I/O.\n\n    A single thread_id is used for the entire session so the\n    checkpointer carries conversation history across turns.\n    \"\"\"\n\n    def __init__(self, voice: str = \"nova\", enable_voice: bool = False):\n        self.enable_voice = enable_voice\n        self.thread_id = uuid.uuid4().hex  # single thread per session\n\n        if enable_voice:\n            self.recorder = VoiceRecorder()\n            self.speaker  = VoiceSpeaker(voice=voice, speed=1.1)\n        else:\n            self.recorder = None\n            self.speaker  = None\n\n        logger.info(\"Assistant ready  (voice=%s)\", enable_voice)\n\n    # ── core query ────────────────────────────────────────\n    # ── core query (handles HITL interrupt/resume) ───────\n    def query(self, text: str, input_fn=None) -> str:\n        \"\"\"Send a text query through the multi-agent graph.\n\n        If the graph pauses for HITL (support agent needs order ID),\n        this method collects user input and resumes the graph.\n        \"\"\"\n        if input_fn is None:\n            input_fn = lambda prompt: input(f\"\\n🔄 Agent asks: {prompt}\\nYou: \").strip()\n\n        config = {\"configurable\": {\"thread_id\": self.thread_id}}\n\n        result = axiomcart_graph.invoke(\n            {\"messages\": [HumanMessage(content=text)], \"user_query\": text},\n            config,\n        )\n\n        # Handle HITL: interrupt() surfaces questions in __interrupt__\n        while \"__interrupt__\" in result and result[\"__interrupt__\"]:\n            question = result[\"__interrupt__\"][0].value\n            logger.info(\"HITL interrupt: %r\", question)\n\n            if self.enable_voice and self.speaker and self.recorder:\n                self.speaker.speak(question)\n                _, user_answer = self.recorder.record_and_transcribe(duration=5)\n                if not user_answer:\n                    user_answer = \"I don't have that information\"\n            else:\n                user_answer = input_fn(question)\n\n            logger.info(\"HITL resume: user_answer=%r\", user_answer)\n            result = axiomcart_graph.invoke(Command(resume=user_answer), config)\n\n        answer = result.get(\"final_answer\", \"\")\n        if not answer:\n            answer = \"Sorry, I wasn't able to process that. Could you try rephrasing?\"\n        return answer\n\n    # ── interactive loops ────────────────────────────────\n    def text_loop(self) -> None:\n        \"\"\"REPL-style text interaction.\"\"\"\n        print(\"\\n🛒  AxiomCart Assistant  (type 'quit' to exit)\\n\")\n        while True:\n            try:\n                user_input = input(\"You: \").strip()\n            except (EOFError, KeyboardInterrupt):\n                break\n            if not user_input or user_input.lower() in (\"quit\", \"exit\", \"bye\"):\n                print(\"Goodbye!\")\n                break\n            answer = self.query(user_input)\n            print(f\"\\nAssistant: {answer}\\n\")\n\n    def voice_loop(self, max_turns: int = 10) -> None:\n        \"\"\"Microphone-based conversation loop.\"\"\"\n        if not self.recorder or not self.speaker:\n            logger.error(\"Voice components not initialised\")\n            return\n\n        welcome = \"Hello! I'm your AxiomCart assistant. How can I help you today?\"\n        self.speaker.speak(welcome)\n\n        for turn in range(1, max_turns + 1):\n            logger.info(\"--- voice turn %d / %d ---\", turn, max_turns)\n            _, transcript = self.recorder.record_and_transcribe(duration=5)\n            if not transcript:\n                self.speaker.speak(\"I didn't catch that. Could you repeat?\")\n                continue\n            if transcript.lower().strip() in (\"goodbye\", \"bye\", \"quit\", \"exit\", \"thank you\"):\n                self.speaker.speak(\"Goodbye! Have a great day.\")\n                break\n            print(f\"\\nYou: {transcript}\")\n            answer = self.query(transcript)\n            print(f\"Assistant: {answer}\\n\")\n            self.speaker.speak(answer)\n\n\n# ── CLI ──────────────────────────────────────────────────────\n\ndef main() -> None:\n    parser = argparse.ArgumentParser(description=\"AxiomCart Multi-Agent Voice System\")\n    parser.add_argument(\"--voice\", action=\"store_true\", help=\"Use microphone input + TTS output\")\n    parser.add_argument(\"--query\", type=str, help=\"Run a single text query and exit\")\n    args = parser.parse_args()\n\n    assistant = AxiomCartAssistant(enable_voice=args.voice)\n\n    if args.query:\n        print(assistant.query(args.query))\n    elif args.voice:\n        assistant.voice_loop()\n    else:\n        assistant.text_loop()\n\n\nif __name__ == \"__main__\":\n    main()\n",
 "src/rag.py": "\"\"\"\nRAG: Build a ChromaDB vector store from the product catalog.\n\nThe vector store is created once at import time and re-used by the\nsearch_product_catalog tool.\n\"\"\"\n\nfrom langchain_chroma import Chroma\nfrom langchain_core.documents import Document\n\nfrom src.config import embeddings, get_logger\nfrom src.data import PRODUCT_CATALOG\n\nlogger = get_logger(\"rag\")\n\n\ndef _build_documents() -> list[Document]:\n    \"\"\"Convert every catalog entry into a LangChain Document.\"\"\"\n    docs: list[Document] = []\n    for p in PRODUCT_CATALOG:\n        content = (\n            f\"Product: {p['name']}\\n\"\n            f\"Brand: {p['brand']}\\n\"\n            f\"Category: {p['category']}\\n\"\n            f\"Price: ₹{p['price']}\\n\"\n            f\"Rating: {p['rating']}/5\\n\"\n            f\"Features: {', '.join(p['features'])}\\n\"\n            f\"Description: {p['description']}\\n\"\n            f\"Colors: {', '.join(p['colors'])}\\n\"\n            f\"In Stock: {'Yes' if p['in_stock'] else 'No'}\"\n        )\n        docs.append(\n            Document(\n                page_content=content,\n                metadata={\n                    \"id\": p[\"id\"],\n                    \"name\": p[\"name\"],\n                    \"brand\": p[\"brand\"],\n                    \"category\": p[\"category\"],\n                    \"price\": p[\"price\"],\n                    \"rating\": p[\"rating\"],\n                },\n            )\n        )\n    return docs\n\n\ndef build_vectorstore() -> Chroma:\n    \"\"\"Create an in-memory ChromaDB collection from the product catalog.\"\"\"\n    docs = _build_documents()\n    store = Chroma.from_documents(\n        documents=docs,\n        embedding=embeddings,\n        collection_name=\"axiomcart_products\",\n    )\n    logger.info(\"Vector store ready  (%d products indexed)\", len(docs))\n    return store\n\n\n# Module-level singleton so every importer shares the same store\nproduct_vectorstore = build_vectorstore()\n",
-"src/config.py": "\"\"\"\nConfiguration: Logger, API clients, and settings.\n\nThis module is imported by everything else, so it must have zero\ndependencies on other project modules.\n\"\"\"\n\nimport logging\nimport os\nimport sys\n\nfrom dotenv import load_dotenv\nfrom langchain_openai import ChatOpenAI, OpenAIEmbeddings\nfrom openai import OpenAI\n\n# ── Load .env ────────────────────────────────────────────────\nload_dotenv()\n\n# ── Logger ───────────────────────────────────────────────────\ndef get_logger(name: str) -> logging.Logger:\n    \"\"\"Create a module-level logger with a readable format.\"\"\"\n    logger = logging.getLogger(name)\n    if not logger.handlers:\n        handler = logging.StreamHandler(sys.stdout)\n        handler.setFormatter(\n            logging.Formatter(\"%(asctime)s | %(name)-18s | %(levelname)-7s | %(message)s\",\n                              datefmt=\"%H:%M:%S\")\n        )\n        logger.addHandler(handler)\n    logger.setLevel(logging.INFO)\n    return logger\n\nlogger = get_logger(\"config\")\n\n# ── Validate API key ────────────────────────────────────────\nOPENAI_API_KEY = os.environ.get(\"OPENAI_API_KEY\", \"\")\nif not OPENAI_API_KEY or OPENAI_API_KEY.startswith(\"sk-your\"):\n    logger.error(\"OPENAI_API_KEY is missing. Copy .env.example → .env and add your key.\")\n    sys.exit(1)\n\n# ── Clients ──────────────────────────────────────────────────\nopenai_client = OpenAI(api_key=OPENAI_API_KEY)\nllm = ChatOpenAI(model=\"gpt-4o\", temperature=0.3)\nembeddings = OpenAIEmbeddings(model=\"text-embedding-3-small\")\n\nlogger.info(\"OpenAI clients initialised  (model: gpt-4o, embeddings: text-embedding-3-small)\")\n"
+"src/config.py": "\"\"\"\nConfiguration: Logger, API clients, and settings.\n\nThis module is imported by everything else, so it must have zero\ndependencies on other project modules.\n\"\"\"\n\nimport logging\nimport os\nimport sys\n\nfrom dotenv import load_dotenv\nfrom langchain_openai import ChatOpenAI, OpenAIEmbeddings\nfrom openai import OpenAI\n\n# ── Load .env ────────────────────────────────────────────────\nload_dotenv()\n\n# ── Logger ───────────────────────────────────────────────────\ndef get_logger(name: str) -> logging.Logger:\n    \"\"\"Create a module-level logger with a readable format.\"\"\"\n    logger = logging.getLogger(name)\n    if not logger.handlers:\n        handler = logging.StreamHandler(sys.stdout)\n        handler.setFormatter(\n            logging.Formatter(\"%(asctime)s | %(name)-18s | %(levelname)-7s | %(message)s\",\n                              datefmt=\"%H:%M:%S\")\n        )\n        logger.addHandler(handler)\n    logger.setLevel(logging.INFO)\n    return logger\n\nlogger = get_logger(\"config\")\n\n# ── Validate API key ────────────────────────────────────────\nOPENAI_API_KEY = os.environ.get(\"OPENAI_API_KEY\", \"\")\nif not OPENAI_API_KEY or OPENAI_API_KEY.startswith(\"sk-your\"):\n    logger.error(\"OPENAI_API_KEY is missing. Copy .env.example → .env and add your key.\")\n    sys.exit(1)\n\n# ── Clients ──────────────────────────────────────────────────\nopenai_client = OpenAI(api_key=OPENAI_API_KEY)\nllm = ChatOpenAI(model=\"gpt-4o\", temperature=0.3)\nembeddings = OpenAIEmbeddings(model=\"text-embedding-3-small\")\n\nlogger.info(\"OpenAI clients initialised  (model: gpt-4o, embeddings: text-embedding-3-small)\")\n",
+"src/voice.py": "\"\"\"\nVoice I/O layer.\n\nVoiceRecorder – microphone → WAV → Whisper STT → text\nVoiceSpeaker  – text → OpenAI TTS → playback\n\"\"\"\n\nfrom __future__ import annotations\n\nimport io\nimport os\nimport tempfile\nimport time\nimport uuid\n\nimport numpy as np\nimport sounddevice as sd\nimport soundfile as sf\n\nfrom src.config import get_logger, openai_client\n\nlogger = get_logger(\"voice\")\n\n\n# ═══════════════════════════════════════════════════════════\n#  Speech-to-Text\n# ═══════════════════════════════════════════════════════════\n\nclass VoiceRecorder:\n    \"\"\"Record from the microphone and transcribe with Whisper.\"\"\"\n\n    def __init__(self, sample_rate: int = 16_000):\n        self.sample_rate = sample_rate\n\n    def record(self, duration: int = 5, countdown: bool = True) -> np.ndarray:\n        \"\"\"Record *duration* seconds of mono audio.\"\"\"\n        if countdown:\n            for i in range(3, 0, -1):\n                logger.info(\"Recording starts in %d …\", i)\n                time.sleep(1)\n\n        logger.info(\"Recording for %d s — speak now!\", duration)\n        audio = sd.rec(\n            int(duration * self.sample_rate),\n            samplerate=self.sample_rate,\n            channels=1,\n            dtype=\"float32\",\n        )\n        sd.wait()\n        logger.info(\"Recording complete\")\n        return audio\n\n    def transcribe(self, audio: np.ndarray, language: str = \"en\") -> str:\n        \"\"\"Send audio to Whisper and return the transcript.\"\"\"\n        buf = io.BytesIO()\n        sf.write(buf, audio, self.sample_rate, format=\"WAV\")\n        buf.seek(0)\n        buf.name = \"recording.wav\"\n\n        try:\n            result = openai_client.audio.transcriptions.create(\n                model=\"whisper-1\", file=buf, language=language,\n            )\n            logger.info(\"Transcription: %r\", result.text)\n            return result.text\n        except Exception:\n            logger.exception(\"Whisper transcription failed\")\n            return \"\"\n\n    def record_and_transcribe(self, duration: int = 5) -> tuple[str, str]:\n        \"\"\"Full pipeline: record → save WAV → transcribe.\n\n        Returns (wav_path, transcript).\n        \"\"\"\n        audio = self.record(duration)\n        wav_path = os.path.join(tempfile.gettempdir(), f\"rec_{uuid.uuid4().hex[:8]}.wav\")\n        sf.write(wav_path, audio, self.sample_rate)\n        text = self.transcribe(audio)\n        return wav_path, text\n\n\n# ═══════════════════════════════════════════════════════════\n#  Text-to-Speech\n# ═══════════════════════════════════════════════════════════\n\nVOICE_OPTIONS = {\n    \"alloy\":   \"Neutral, professional\",\n    \"echo\":    \"Male, clear and steady\",\n    \"fable\":   \"British accent, expressive\",\n    \"onyx\":    \"Deep male, authoritative\",\n    \"nova\":    \"Female, warm and friendly\",\n    \"shimmer\": \"Female, soft and gentle\",\n}\n\n\nclass VoiceSpeaker:\n    \"\"\"Convert text to speech and play it back.\"\"\"\n\n    def __init__(self, voice: str = \"nova\", speed: float = 1.0):\n        self.voice = voice\n        self.speed = speed\n        self._out_dir = tempfile.gettempdir()\n\n    def synthesise(self, text: str) -> str:\n        \"\"\"Generate an MP3 file and return its path. Each call gets a\n        unique filename so previous responses are never overwritten.\"\"\"\n        out_path = os.path.join(self._out_dir, f\"tts_{uuid.uuid4().hex[:8]}.mp3\")\n        try:\n            resp = openai_client.audio.speech.create(\n                model=\"tts-1\", voice=self.voice, input=text, speed=self.speed,\n            )\n            resp.stream_to_file(out_path)\n            logger.info(\"TTS saved → %s\", out_path)\n            return out_path\n        except Exception:\n            logger.exception(\"TTS synthesis failed\")\n            return \"\"\n\n    def play(self, audio_file: str) -> None:\n        \"\"\"Play an audio file through the default output device.\"\"\"\n        try:\n            data, sr = sf.read(audio_file)\n            sd.play(data, sr)\n            sd.wait()\n        except Exception:\n            logger.exception(\"Audio playback failed\")\n\n    def speak(self, text: str, play: bool = True) -> str:\n        \"\"\"Synthesise *text* and optionally play it. Returns the file path.\"\"\"\n        logger.info(\"Agent says: %s\", text[:120])\n        path = self.synthesise(text)\n        if play and path:\n            self.play(path)\n        return path\n"
 }/*__END_FILES__*/;
 
 /* ── The rendered code block: one entry per line of the README diagram.
@@ -1179,13 +1254,13 @@ function renderData(){
     <p class="intro">Everything the assistant knows is hard-coded in <code>src/data.py</code> — no database, no network. This is the exact catalog, order book, and policy text you get when you follow the README and run <code>uv run python -m src.main</code>.</p>
     <p class="intro">It is all in-memory: the catalog is embedded into a fresh vector store on every import, order records are never written to, and any escalation tickets vanish when the process exits.</p>
 
-    <div class="sec">
+    <div class="sec" id="data-catalog">
       <h2>Product catalog ${srcChip('catalog')}<span class="count">${products.length} products · what the product agent can search</span></h2>
       <p class="sub">The product agent has exactly one tool, and it searches these eight entries semantically — not by keyword. Expand a card to see the text that actually gets embedded ${srcChip('ragdoc')}.</p>
       <div class="cards">${cards}</div>
     </div>
 
-    <div class="sec">
+    <div class="sec" id="data-orders">
       <h2>Order database ${srcChip('orders')}<span class="count">${orders.length} orders · ${delayed} delayed</span></h2>
       <p class="sub">Look an order up by ID or by customer email. IDs are forgiving — <code>ORD102</code>, <code>ORD-102</code>, <code>ord-102</code> and bare <code>102</code> all resolve to the same record.</p>
       <table class="tbl">
@@ -1194,13 +1269,13 @@ function renderData(){
       </table>
     </div>
 
-    <div class="sec">
+    <div class="sec" id="data-policies">
       <h2>Support policies ${srcChip('policies')}<span class="count">injected into the support agent's prompt</span></h2>
       <p class="sub">This block is interpolated straight into SUPPORT_PROMPT, which is why the support agent can quote shipping prices it was never given a tool for.</p>
       <pre class="policy">${esc(DATA.SUPPORT_POLICIES || '')}</pre>
     </div>
 
-    <div class="sec">
+    <div class="sec" id="data-queue">
       <h2>Escalation queue ${srcChip('queue')}<span class="count">empty at startup</span></h2>
       <p class="sub">Starts as an empty list and fills up at runtime whenever <code>escalate_to_human</code> fires ${srcChip('ticket')}.</p>
       <div class="box">
@@ -1214,7 +1289,7 @@ function renderData(){
       </div>
     </div>
 
-    <div class="sec">
+    <div class="sec" id="data-asks">
       <h2>Things to try<span class="count">prompts that exercise this data</span></h2>
       <p class="sub">Each of these hits a different path through the graph. Step through that path on the Graph Execution tab.</p>
       <div class="asks">
@@ -1869,12 +1944,365 @@ function renderLang(){
   });
 }
 
+/* ══ Architecture diagram ════════════════════════════════════
+   An interactive redraw of architecture-diagram.svg. Every box links to
+   its code and to the matching parts of the other tabs. Code is located
+   by symbol in the embedded sources, so no line numbers are pinned here. ── */
+
+/* {f, find, to?} → a pane ref. A def/class (with its decorators) runs to the
+   end of its indented block; `to` ends at the first later line containing it;
+   anything else is the single matching line. */
+function locate(ref){
+  const lines = (FILES[ref.f] || '').split('\n');
+  let a = lines.findIndex(l => l.includes(ref.find));
+  if(a < 0) return null;
+  let b = a;
+  const head = lines[a].trimStart();
+  if(ref.to){
+    const k = lines.findIndex((l, i) => i > a && l.includes(ref.to));
+    if(k > 0) b = k;
+  } else if(/^(def|class)\s/.test(head)){
+    const indent = lines[a].length - head.length;
+    for(let i = a + 1; i < lines.length; i++){
+      if(!lines[i].trim()) continue;
+      if(lines[i].length - lines[i].trimStart().length <= indent) break;
+      b = i;
+    }
+    while(a > 0 && lines[a - 1].trimStart().startsWith('@')) a--;
+  }
+  return {label: ref.label, f: ref.f, r: [[a + 1, b + 1]], n: ref.n};
+}
+
+const stepLabel = text => text.replace(/^[\s│└┌─▶•]+/, '');
+const stepIndex = text => STEPS.findIndex(s => s.f && stepLabel(s.t).startsWith(stepLabel(text)));
+
+/* Kinds: io (voice, outside the graph), pill (graph entry/exit), tool, hitl.
+   Links: {exec: step text} {data: section} {lang: tab} {trace: event test}. */
+const DIAG = {
+  stt: {x:470, y:40, w:240, h:54, kind:'io', icon:'🎙', title:'Speech to Text', sub:'voice mode · Whisper',
+    desc:`Voice mode only (<code>--voice</code>). <code>VoiceRecorder</code> records five seconds from the microphone and sends the WAV to Whisper; the transcript becomes the user's query. It also captures the spoken answer when the support agent pauses to ask a question. Text mode reads <code>input()</code> instead.`,
+    code:[{label:'voice.py: transcribe', f:'src/voice.py', find:'def transcribe'},
+          {label:'voice.py: record_and_transcribe', f:'src/voice.py', find:'def record_and_transcribe'},
+          {label:'main.py: voice_loop', f:'src/main.py', find:'def voice_loop'}],
+    links:[]},
+
+  start: {x:470, y:128, w:110, h:34, kind:'pill', title:'START', mono:true, sub:'',
+    desc:`Each turn starts with <code>invoke()</code>: the text goes in as <code>user_query</code> plus a <code>HumanMessage</code>. Every turn reuses one <code>thread_id</code>, so the <code>MemorySaver</code> checkpointer carries state between turns and lets a paused graph resume.`,
+    code:[{label:'main.py: invoke', f:'src/main.py', find:'result = axiomcart_graph.invoke(', to:'        )'},
+          {label:'graph.py: build_graph', f:'src/graph.py', find:'def build_graph'}],
+    links:[{exec:'1. START'}, {trace: e => e.k === 'invoke' && e.kind === 'start', label:'invoke() — start'}]},
+
+  orch: {x:470, y:210, w:320, h:62, icon:'🎛', title:'Orchestrator', sub:'classify → Send() to one or both agents',
+    desc:`One structured-output LLM call classifies the query into tasks. A <code>Command</code> then fans out with one <code>Send()</code> per task, so both agents can run in parallel in the same step. Greetings and anything unclear go to the product agent; if classification fails outright, it falls back to the product agent too.`,
+    code:[{label:'nodes.py: orchestrator_node', f:'src/nodes.py', find:'def orchestrator_node'},
+          {label:'state.py: ClassificationResult', f:'src/state.py', find:'class ClassificationResult'},
+          {label:'state.py: AgentTask', f:'src/state.py', find:'class AgentTask'}],
+    links:[{exec:'└─▶ orchestrator_node'}, {exec:'• Dispatches via Send()'}, {lang:'commands', label:'Command + Send fan-out'},
+           {trace: e => e.k === 'llm' && e.node === 'orchestrator_node', label:'classifier LLM call'}]},
+
+  product: {x:205, y:486, w:350, h:352, cluster:'product', title:'product_agent', sub:'model ⇄ tools subgraph',
+    desc:`The main-graph node for product questions and small talk. It formats earlier turns into a context block, runs <code>product_subgraph</code> with <code>PRODUCT_PROMPT</code>, and writes the reply into <code>agent_results</code> before handing off to the synthesizer.`,
+    code:[{label:'nodes.py: product_agent', f:'src/nodes.py', find:'def product_agent'},
+          {label:'nodes.py: PRODUCT_PROMPT', f:'src/nodes.py', find:'PRODUCT_PROMPT = ', to:'"""'},
+          {label:'nodes.py: build_context', f:'src/nodes.py', find:'def build_context'}],
+    links:[{exec:'┌─▶ product_agent'}, {exec:'• Injects PRODUCT_PROMPT'}, {lang:'reducers', label:'agent_results reducer'},
+           {trace: e => e.k === 'node' && e.name === 'product_agent', label:'product_agent run'}]},
+
+  pm: {x:250, y:395, w:160, h:54, icon:'🤖', title:'Model', sub:'product_model',
+    desc:`Calls GPT-4o with <code>search_product_catalog</code> bound as a tool. <code>should_continue</code> sends a reply with tool calls to the tools node; a reply without them ends the subgraph and becomes the agent's answer.`,
+    code:[{label:'nodes.py: product_model', f:'src/nodes.py', find:'def product_model'},
+          {label:'nodes.py: should_continue', f:'src/nodes.py', find:'def should_continue'},
+          {label:'nodes.py: product subgraph wiring', f:'src/nodes.py', find:'pb = StateGraph', to:'product_subgraph = pb.compile()'}],
+    links:[{exec:'• Runs product_subgraph'}, {exec:'model → calls search_product_catalog'},
+           {trace: e => e.k === 'llm' && e.node === 'product_agent', label:'product model LLM call'}]},
+
+  pt: {x:250, y:505, w:160, h:54, kind:'tool', icon:'🛠', title:'Tools', sub:'product_tools_node',
+    desc:`Runs each tool call from the model's last message and returns the results as <code>ToolMessage</code>s, then loops back to the model. An unknown tool name returns an error string instead of raising.`,
+    code:[{label:'nodes.py: product_tools_node', f:'src/nodes.py', find:'def product_tools_node'},
+          {label:'nodes.py: tool registry', f:'src/nodes.py', find:'product_tools = [', to:'product_tools_by_name'}],
+    links:[{exec:'model → calls search_product_catalog'}]},
+
+  t1: {x:205, y:615, w:260, h:54, kind:'tool', icon:'🔍', title:'search_product_catalog', mono:true, sub:'semantic search over products (RAG)',
+    desc:`Similarity search (top 3) over a Chroma vector store built at import time: each catalog entry becomes one document, embedded with <code>text-embedding-3-small</code>.`,
+    code:[{label:'tools.py: search_product_catalog', f:'src/tools.py', find:'def search_product_catalog'},
+          {label:'rag.py: _build_documents', f:'src/rag.py', find:'def _build_documents'},
+          {label:'rag.py: build_vectorstore', f:'src/rag.py', find:'def build_vectorstore'}],
+    links:[{data:'catalog', label:'Product catalog'}, {exec:'tools → returns Bose'},
+           {trace: e => e.k === 'tool' && e.name === 'search_product_catalog', label:'search_product_catalog call'}]},
+
+  support: {x:665, y:486, w:490, h:352, cluster:'support', title:'support_agent', sub:'model ⇄ tools + ask_user subgraph', right:true,
+    desc:`The main-graph node for orders, complaints and escalation. Same shape as the product agent, with <code>SUPPORT_PROMPT</code> (which embeds the support policies) and one extra node, <code>ask_user</code>, for pausing to ask the customer a question.`,
+    code:[{label:'nodes.py: support_agent', f:'src/nodes.py', find:'def support_agent'},
+          {label:'nodes.py: SUPPORT_PROMPT', f:'src/nodes.py', find:'SUPPORT_PROMPT = ', to:'"""'},
+          {label:'nodes.py: support subgraph wiring', f:'src/nodes.py', find:'sb = StateGraph', to:'support_subgraph = sb.compile()'}],
+    links:[{exec:'└─▶ support_agent'}, {exec:'• Injects SUPPORT_PROMPT'}, {data:'policies', label:'Support policies'},
+           {trace: e => e.k === 'node' && e.name === 'support_agent', label:'support_agent run'}]},
+
+  sm: {x:600, y:395, w:160, h:54, icon:'🤖', title:'Model', sub:'support_model',
+    desc:`Calls GPT-4o with the two support tools bound. <code>support_should_continue</code> routes the reply: tool calls go to the tools node; a reply before any tool has run means the agent is asking for missing information, so it goes to <code>ask_user</code>; anything else ends the subgraph.`,
+    code:[{label:'nodes.py: support_model', f:'src/nodes.py', find:'def support_model'},
+          {label:'nodes.py: support_should_continue', f:'src/nodes.py', find:'def support_should_continue'}],
+    links:[{exec:'• Runs support_subgraph'}, {exec:'model → no tool calls'},
+           {trace: e => e.k === 'llm' && e.node === 'support_agent', label:'support model LLM call'}]},
+
+  hitl: {x:830, y:395, w:140, h:54, kind:'hitl', icon:'👤', title:'ask_user', mono:true, sub:'interrupt() · HITL',
+    desc:`Human in the loop. <code>interrupt()</code> suspends the whole graph and <code>invoke()</code> returns with the question in <code>__interrupt__</code>. <code>main.py</code> asks the user (spoken in voice mode) and resumes with <code>Command(resume=answer)</code>. Resuming re-runs this node, <code>interrupt()</code> returns the answer, and it loops back to the model. It is a separate node so the model's LLM call is not repeated on resume.`,
+    code:[{label:'nodes.py: ask_user', f:'src/nodes.py', find:'def ask_user'},
+          {label:'main.py: interrupt / resume loop', f:'src/main.py', find:'# Handle HITL', to:'Command(resume=user_answer)'}],
+    links:[{exec:'ask_user → interrupt()'}, {exec:'← HITL: user is asked'}, {lang:'commands', label:'Command(resume=…)'},
+           {trace: e => e.k === 'interrupt', label:'interrupt and resume'}]},
+
+  st: {x:600, y:505, w:160, h:54, kind:'tool', icon:'🛠', title:'Tools', sub:'support_tools_node',
+    desc:`Runs the support model's tool calls against <code>sales_tools_by_name</code> and returns <code>ToolMessage</code>s, then loops back to the model.`,
+    code:[{label:'nodes.py: support_tools_node', f:'src/nodes.py', find:'def support_tools_node'},
+          {label:'nodes.py: tool registry', f:'src/nodes.py', find:'sales_tools = [', to:'sales_tools_by_name'}],
+    links:[{exec:'model → calls get_order_status'}]},
+
+  t2: {x:530, y:615, w:190, h:54, kind:'tool', icon:'📦', title:'get_order_status', mono:true, sub:'by order ID or email',
+    desc:`Looks an order up by ID (accepting forms like <code>ord-102</code> or <code>102</code>) or by customer email, and formats the record, adding the delay reason when there is one.`,
+    code:[{label:'tools.py: get_order_status', f:'src/tools.py', find:'def get_order_status'},
+          {label:'tools.py: normalise_order_id', f:'src/tools.py', find:'def normalise_order_id'}],
+    links:[{data:'orders', label:'Order database'}, {exec:'tools → returns order details'},
+           {trace: e => e.k === 'tool' && e.name === 'get_order_status', label:'get_order_status call'}]},
+
+  t3: {x:770, y:615, w:220, h:54, kind:'tool', icon:'🚨', title:'escalate_to_human', mono:true, sub:'create a support ticket',
+    desc:`Creates a ticket with a random <code>ESC-</code> id and a priority, pulls the customer's details from the order, and appends it to an in-memory escalation queue. No email is sent.`,
+    code:[{label:'tools.py: escalate_to_human', f:'src/tools.py', find:'def escalate_to_human'}],
+    links:[{data:'queue', label:'Escalation queue'}, {data:'policies', label:'Escalation rules (support policies)'},
+           {trace: e => e.k === 'tool' && e.name === 'escalate_to_human', label:'escalate_to_human call'}]},
+
+  syn: {x:470, y:735, w:220, h:54, icon:'🧩', title:'Synthesizer', sub:'synthesizer_node',
+    desc:`Collects every agent's entry in <code>agent_results</code>. One result passes straight through; two are merged by an LLM into a single reply. Either way it writes <code>final_answer</code>.`,
+    code:[{label:'nodes.py: synthesizer_node', f:'src/nodes.py', find:'def synthesizer_node'},
+          {label:'state.py: agent_results_reducer', f:'src/state.py', find:'def agent_results_reducer'}],
+    links:[{exec:'└─▶ synthesizer_node'}, {lang:'reducers', label:'agent_results reducer'},
+           {trace: e => e.k === 'node' && e.name === 'synthesizer_node', label:'synthesizer run'}]},
+
+  pass: {x:345, y:835, w:190, h:50, title:'Pass-through', sub:'1 agent result',
+    desc:`With a single agent result, its reply becomes <code>final_answer</code> as-is — no extra LLM call.`,
+    code:[{label:'nodes.py: single-agent pass-through', f:'src/nodes.py', find:'if len(results) == 1:', to:'return {"final_answer": results[0]'}],
+    links:[{exec:'└─▶ synthesizer_node'}]},
+
+  merge: {x:595, y:835, w:190, h:50, title:'LLM merge', sub:'2 agent results',
+    desc:`With results from both agents, one more LLM call weaves them into a single reply that answers every part of the query.`,
+    code:[{label:'nodes.py: merge prompt + call', f:'src/nodes.py', find:'parts = "\\n\\n".join(', to:'return {"final_answer": merged.content}'}],
+    links:[{exec:'• LLM merges them'}, {trace: e => e.k === 'llm' && e.node === 'synthesizer_node', label:'merge LLM call'}]},
+
+  end: {x:470, y:930, w:230, h:38, kind:'pill', title:'END · final_answer', mono:true, sub:'',
+    desc:`<code>synthesizer → END</code> closes the graph. <code>query()</code> reads <code>final_answer</code> off the returned state, with a fallback message if it is empty, and prints it.`,
+    code:[{label:'graph.py: synthesizer → END', f:'src/graph.py', find:'builder.add_edge("synthesizer", END)'},
+          {label:'main.py: read final_answer', f:'src/main.py', find:'answer = result.get("final_answer"', to:'return answer'}],
+    links:[{exec:'└─▶ final_answer returned'}, {trace: e => e.k === 'final', label:'final answer'}]},
+
+  tts: {x:470, y:1030, w:240, h:54, kind:'io', icon:'🔊', title:'Text to Speech', sub:'voice mode · OpenAI TTS',
+    desc:`Voice mode only. <code>VoiceSpeaker</code> turns the answer into an MP3 with OpenAI's <code>tts-1</code> (voice "nova") and plays it. The same path speaks the welcome line and any question the support agent asks.`,
+    code:[{label:'voice.py: synthesise', f:'src/voice.py', find:'def synthesise'},
+          {label:'voice.py: speak', f:'src/voice.py', find:'def speak'},
+          {label:'main.py: speak the answer', f:'src/main.py', find:'self.speaker.speak(answer)'}],
+    links:[]},
+};
+
+/* a → b. ao/bo shift the start/end anchor along the box edge; dx shifts both. */
+const DIAG_EDGES = [
+  {a:'stt', b:'start', label:'transcript', anchor:'start', ly:-6},
+  {a:'start', b:'orch'},
+  {a:'orch', b:'pm', ao:-70, label:'product / greeting', lx:384, ly:268, anchor:'end'},
+  {a:'orch', b:'sm', ao:70, label:'order / support', lx:556, ly:268, anchor:'start'},
+  {a:'pm', b:'pt', dx:-20, label:'tool calls', anchor:'end'},
+  {a:'pt', b:'pm', dx:20, label:'results', anchor:'start'},
+  {a:'pt', b:'t1', bo:45},
+  {a:'sm', b:'st', dx:-20, label:'tool calls', anchor:'end'},
+  {a:'st', b:'sm', dx:20, label:'results', anchor:'start'},
+  {a:'st', b:'t2', ao:-30, bo:40},
+  {a:'st', b:'t3', ao:30, bo:-60},
+  {a:'sm', b:'hitl', dx:-10, dash:true, label:'missing info', ly:-8},
+  {a:'hitl', b:'sm', dx:10, dash:true, label:'user reply', ly:20},
+  {a:'product', b:'syn', bo:-60},
+  {a:'support', b:'syn', ao:-30, bo:60},
+  {a:'syn', b:'pass', ao:-40, label:'1 agent', anchor:'end', lx:-22},
+  {a:'syn', b:'merge', ao:40, label:'2 agents', anchor:'start', lx:22},
+  {a:'pass', b:'end', bo:-40},
+  {a:'merge', b:'end', bo:40},
+  {a:'end', b:'tts', label:'voice mode', lx:480, ly:990, anchor:'start'},
+];
+
+let diagSel = null;
+
+function dgPoint(n, side, off){
+  if(side === 't') return [n.x + off, n.y - n.h / 2];
+  if(side === 'b') return [n.x + off, n.y + n.h / 2];
+  if(side === 'l') return [n.x - n.w / 2, n.y + off];
+  return [n.x + n.w / 2, n.y + off];
+}
+
+function dgEdge(e){
+  const A = DIAG[e.a], B = DIAG[e.b];
+  const ao = (e.ao || 0) + (e.dx || 0), bo = (e.bo || 0) + (e.dx || 0);
+  const hot = diagSel && (e.a === diagSel || e.b === diagSel);
+  let d, mx, my;
+  if(Math.abs(A.y - B.y) < 5){                       // same row → horizontal
+    const [x1, y1] = dgPoint(A, A.x < B.x ? 'r' : 'l', ao);
+    const [x2, y2] = dgPoint(B, A.x < B.x ? 'l' : 'r', bo);
+    d = `M${x1},${y1} L${x2},${y2}`; mx = (x1 + x2) / 2; my = y1;
+  } else {
+    const down = B.y > A.y;
+    const [x1, y1] = dgPoint(A, down ? 'b' : 't', ao);
+    const [x2, y2] = dgPoint(B, down ? 't' : 'b', bo);
+    const m = (y1 + y2) / 2;
+    d = x1 === x2 ? `M${x1},${y1} L${x2},${y2}` : `M${x1},${y1} C${x1},${m} ${x2},${m} ${x2},${y2}`;
+    mx = (x1 + x2) / 2; my = m;
+  }
+  let out = `<path class="dg-e${e.dash ? ' dash' : ''}${hot ? ' hot' : ''}" d="${d}" marker-end="url(#dg-arrow${hot ? '-hot' : ''})"/>`;
+  if(e.label){
+    const anchor = e.anchor || 'middle';
+    // lx/ly above 100 are absolute positions, small values nudge from the midpoint
+    const x = e.lx > 100 ? e.lx : mx + (e.lx || (anchor === 'end' ? -8 : anchor === 'start' ? 8 : 0));
+    const y = e.ly > 100 ? e.ly : my + (e.ly || 4);
+    out += `<text class="dg-l${hot ? ' hot' : ''}" x="${x}" y="${y}" text-anchor="${anchor}">${esc(e.label)}</text>`;
+  }
+  return out;
+}
+
+function dgBox(id){
+  const n = DIAG[id];
+  const x = n.x - n.w / 2, y = n.y - n.h / 2;
+  const rx = n.kind === 'pill' ? n.h / 2 : 9;
+  const title = (n.icon ? n.icon + '  ' : '') + n.title;
+  const ty = n.sub ? n.y - 3 : n.y + 5;
+  return `<g class="dg-node ${n.kind || ''}${diagSel === id ? ' sel' : ''}" data-id="${id}" tabindex="0" role="button"
+      aria-label="${esc(n.title)}${n.sub ? ' — ' + esc(n.sub) : ''}">
+    <rect x="${x}" y="${y}" width="${n.w}" height="${n.h}" rx="${rx}"/>
+    <text class="dg-t${n.mono ? ' mono' : ''}" x="${n.x}" y="${ty}" text-anchor="middle">${esc(title)}</text>
+    ${n.sub ? `<text class="dg-s" x="${n.x}" y="${n.y + 15}" text-anchor="middle">${esc(n.sub)}</text>` : ''}
+  </g>`;
+}
+
+function dgCluster(id){
+  const n = DIAG[id];
+  const x = n.x - n.w / 2, y = n.y - n.h / 2;
+  const tx = n.right ? x + n.w - 14 : x + 14, anchor = n.right ? 'end' : 'start';
+  return `<g class="dg-cluster ${n.cluster}${diagSel === id ? ' sel' : ''}" data-id="${id}" tabindex="0" role="button"
+      aria-label="${esc(n.title)} — ${esc(n.sub)}">
+    <rect x="${x}" y="${y}" width="${n.w}" height="${n.h}" rx="12"/>
+    <text class="dg-ct" x="${tx}" y="${y + 24}" text-anchor="${anchor}">${esc(n.title)}</text>
+    <text class="dg-cs" x="${tx}" y="${y + 41}" text-anchor="${anchor}">${esc(n.sub)}</text>
+  </g>`;
+}
+
+function diagramSvg(){
+  const ids = Object.keys(DIAG);
+  return `<svg viewBox="0 0 940 1075" role="group" aria-label="AxiomCart architecture">
+    <defs>
+      <marker id="dg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#8c959f"/></marker>
+      <marker id="dg-arrow-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#0969da"/></marker>
+    </defs>
+    <rect class="dg-frame" x="14" y="88" width="912" height="888" rx="14"/>
+    <text class="dg-fl" x="30" y="110">axiomcart_graph · LangGraph StateGraph + MemorySaver</text>
+    ${ids.filter(id => DIAG[id].cluster).map(dgCluster).join('')}
+    ${DIAG_EDGES.map(dgEdge).join('')}
+    ${ids.filter(id => !DIAG[id].cluster).map(dgBox).join('')}
+  </svg>`;
+}
+
+function traceTurn(test){
+  if(!capture) return -1;
+  return splitTurns(capture.events || []).findIndex(g => g.events.some(test));
+}
+
+/* Each link resolves to {where, label, go} — go is null when the target is missing. */
+function resolveLink(l){
+  if(l.exec){
+    const i = stepIndex(l.exec);
+    return {where:'Graph Execution', label: stepLabel(l.exec), go: i < 0 ? null : () => {
+      navigate('exec');
+      select(i, false);
+      block.querySelector(`.dl[data-i="${i}"]`).scrollIntoView({block:'center'});
+    }};
+  }
+  if(l.data) return {where:'Demo Data', label: l.label, go: () => {
+    navigate('data');
+    document.getElementById('data-' + l.data).scrollIntoView({block:'start'});
+  }};
+  if(l.lang) return {where:'LangGraph', label: l.label, go: () => navigate(`lang/${l.lang}`)};
+  if(l.trace){
+    const t = traceTurn(l.trace);
+    return t < 0
+      ? {where:'Prompt Trace', label: l.label + ' — not in the loaded capture', go: null}
+      : {where:'Prompt Trace', label: `${l.label} — turn ${t + 1}`, go: () => navigate(`trace/${t + 1}`)};
+  }
+}
+
+function diagramPanel(){
+  if(!diagSel) return `
+    <h2>Architecture</h2>
+    <p class="kind">click a box for its code and links</p>
+    <ul class="legend">
+      <li><svg width="44" height="10"><path class="dg-e" d="M2,5 H40" marker-end="url(#dg-arrow)"/></svg>graph edge</li>
+      <li><svg width="44" height="10"><path class="dg-e dash" d="M2,5 H40"/></svg>HITL pause and resume</li>
+      <li><svg width="44" height="14"><rect class="dg-frame" x="2" y="2" width="40" height="10" rx="3"/></svg>inside the LangGraph graph</li>
+      <li><svg width="44" height="14"><rect x="2" y="2" width="40" height="10" rx="3" fill="#f5f0ff" stroke="#c4b1f0"/></svg>voice I/O — only with <code>--voice</code></li>
+    </ul>
+    <p>The flow runs top to bottom. Both agent boxes are subgraphs: each has its own model ⇄ tools loop, and the support agent can pause the whole graph to ask the customer a question.</p>`;
+
+  const n = DIAG[diagSel];
+  const refs = n.code.map(locate);
+  const links = n.links.map(resolveLink);
+  return `
+    <h2>${n.icon ? `<span>${n.icon}</span>` : ''}${esc(n.title)}</h2>
+    <p class="kind">${esc(n.sub || (n.kind === 'pill' ? 'graph boundary' : ''))}</p>
+    <p>${n.desc}</p>
+    <h3>Code</h3>
+    <div class="chips">${refs.map((r, j) => r
+      ? `<button class="srcbtn" data-code="${j}">${esc(r.label)}</button>`
+      : `<button class="srcbtn" disabled>${esc(n.code[j].label)} — not found</button>`).join('')}</div>
+    ${links.length ? `<h3>Elsewhere in this page</h3>
+    <ul class="links">${links.map((l, j) => `<li><button data-link="${j}" ${l.go ? '' : 'disabled'}>
+      <span class="where">${l.where}</span>${esc(l.label)}</button></li>`).join('')}</ul>` : ''}`;
+}
+
+function renderDiagram(){
+  const root = document.getElementById('diagroot');
+  root.innerHTML = `
+    <h1>Architecture</h1>
+    <p class="lede">The orchestrator routes each query to one or both agents, each a LangGraph subgraph with its own model ⇄ tools loop, and the synthesizer turns their results into one reply. Voice I/O wraps the graph in <code>--voice</code> mode.</p>
+    <div class="dg-wrap">
+      <div class="dg-canvas">${diagramSvg()}</div>
+      <aside class="dg-panel" aria-live="polite">${diagramPanel()}</aside>
+    </div>`;
+
+  const pick = id => navigate(id ? `diagram/${id}` : 'diagram');
+  root.querySelectorAll('[data-id]').forEach(g => {
+    g.addEventListener('click', ev => { ev.stopPropagation(); pick(g.dataset.id); });
+    g.addEventListener('keydown', ev => {
+      if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); pick(g.dataset.id); }
+    });
+  });
+  root.querySelector('.dg-canvas svg').addEventListener('click', () => pick(null));
+
+  if(!diagSel) return;
+  const n = DIAG[diagSel];
+  const refs = n.code.map(locate);
+  root.querySelectorAll('[data-code]').forEach(b => {
+    b.onclick = () => openPane({refs: refs.filter(Boolean), k: refs.filter(Boolean).indexOf(refs[+b.dataset.code])}, true);
+  });
+  const links = n.links.map(resolveLink);
+  root.querySelectorAll('[data-link]').forEach(b => {
+    const l = links[+b.dataset.link];
+    if(l.go) b.onclick = l.go;
+  });
+  // keep the keyboard focus on the box that was just chosen
+  const g = root.querySelector(`.dg-canvas [data-id="${diagSel}"]`);
+  if(g && document.activeElement === document.body) g.focus({preventScroll: true});
+}
+
 /* ── Tabs + history ───────────────────────────────────────────
    The hash holds the tab and its sub-tab — #exec, #data, #trace/2,
-   #lang/reducers — so every tab click is a history entry and the
+   #lang/reducers, #diagram/ask_user — so every tab click is a history entry and the
    back button walks through them. ───────────────────────────── */
 let view = 'exec';
-const VIEWS = ['exec', 'trace', 'data', 'lang'];
+const VIEWS = ['exec', 'trace', 'data', 'lang', 'diagram'];
 
 function setView(v){
   view = v;
@@ -1885,6 +2313,7 @@ function setView(v){
 function hashFor(v){
   if(v === 'trace') return `trace/${activeTurn + 1}`;
   if(v === 'lang') return `lang/${langTab}`;
+  if(v === 'diagram') return diagSel ? `diagram/${diagSel}` : 'diagram';
   return v;
 }
 
@@ -1912,6 +2341,11 @@ function route(){
       document.getElementById('view-lang').scrollTop = 0;
     }
   }
+  if(v === 'diagram'){
+    const id = DIAG[sub] ? sub : null;
+    // also redraw on entering the tab: trace links depend on the loaded capture
+    if(id !== diagSel || v !== view){ diagSel = id; renderDiagram(); }
+  }
   if(v !== view) setView(v);
 
   const p = (history.state && history.state.pane) || null;
@@ -1930,6 +2364,7 @@ window.addEventListener('hashchange', route);
 renderData();
 renderTrace();
 renderLang();
+renderDiagram();
 route();
 </script>
 </body>

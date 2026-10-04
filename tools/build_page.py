@@ -23,7 +23,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PAGE = ROOT / "graph-walkthrough.html"
-NAMES = ["graph.py", "nodes.py", "state.py", "tools.py", "data.py", "main.py", "rag.py", "config.py"]
+NAMES = ["graph.py", "nodes.py", "state.py", "tools.py", "data.py", "main.py", "rag.py", "config.py", "voice.py"]
 WANTED = ["PRODUCT_CATALOG", "ORDER_DATABASE", "SUPPORT_POLICIES"]
 
 
