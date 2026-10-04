@@ -46,6 +46,7 @@
   .views{flex:1 1 auto; min-width:0; height:100%}
   .view{display:none}
   .view.on{display:block; height:100%; overflow:auto; -webkit-overflow-scrolling:touch}
+  #view-lang.on{overflow:auto}
   .codepane{
     flex:0 0 50%; max-width:50%; height:100%; overflow:auto;
     border-left:1px solid var(--border); background:var(--code-bg);
@@ -440,6 +441,41 @@
   mark.task{background:#eadffb; box-shadow:inset 0 -1px 0 #b491e6}
   mark.b{background:none; color:inherit; font-weight:700; padding:0}
 
+  /* ── LangGraph reference ──────────────────────────────── */
+  .lgsec{margin:26px 0 0}
+  .lgsec > h2{font-size:15.5px; margin:0 0 3px; letter-spacing:-.01em}
+  .lgsec > .sub{margin:0 0 14px; font-size:13px; color:var(--fg-dim); max-width:80ch}
+  .lgitem{border:1px solid var(--border); border-radius:10px; margin:0 0 12px; background:var(--bg)}
+  .lgitem > .lghead{
+    display:flex; align-items:center; gap:11px; flex-wrap:wrap;
+    padding:10px 14px; background:var(--bg-alt); border-bottom:1px solid var(--border);
+  }
+  .lgname{font:13.5px ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:700}
+  .lgkind{
+    font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--accent);
+    background:var(--bg); border:1px solid #c9dcf2; border-radius:999px; padding:2px 9px;
+  }
+  .lgkind.none{color:var(--fg-dim); border-color:var(--border)}
+  .lghead .sp{flex:1}
+  .lgbody{padding:12px 14px}
+  .lgbody p{margin:0 0 10px; font-size:13px; line-height:1.6; color:var(--fg-dim)}
+  .lgbody p:last-child{margin-bottom:0}
+  .lgbody b{color:var(--fg)}
+  .lgbody code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--fg)}
+  .snip{
+    border:1px solid var(--border); border-radius:8px; background:var(--code-bg);
+    overflow-x:auto; padding:8px 0; margin:0 0 11px;
+    font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  .snip .row{display:flex; padding-right:14px}
+  .snip .row.mark{background:var(--hl-bg)}
+  .snip .row.mark .ln{color:var(--fg-dim)}
+  .snip .ln{
+    flex:0 0 48px; text-align:right; padding-right:12px; color:var(--ln);
+    user-select:none; -webkit-user-select:none;
+  }
+  .snip .lc{white-space:pre}
+
   .kw{color:var(--k)} .str{color:var(--s)} .com{color:var(--c); font-style:italic}
   .num{color:var(--n)} .fn{color:var(--f)} .dec{color:var(--d)} .cls{color:var(--t)} .bi{color:var(--n)}
 
@@ -470,6 +506,7 @@
     <button class="tab on" data-view="exec">Graph Execution</button>
     <button class="tab" data-view="trace">Prompt Trace</button>
     <button class="tab" data-view="data">Demo Data</button>
+    <button class="tab" data-view="lang">LangGraph</button>
   </nav>
 </header>
 
@@ -490,6 +527,10 @@
 
     <section class="view" id="view-data">
       <div class="data" id="dataroot"></div>
+    </section>
+
+    <section class="view" id="view-lang">
+      <div class="trace" id="langroot"></div>
     </section>
   </div>
 
@@ -1688,6 +1729,123 @@ function loadCapture(f){
 })();
 
 
+/* ══ LangGraph reference ═════════════════════════════════════
+   Every reducer and every Command in this codebase, with the real
+   lines pulled from the embedded source. ─────────────────────── */
+
+const LANG = {
+  reducers: {
+    title: 'Reducers',
+    sub: 'A reducer decides what happens when a node returns a value for a state key: without one the new value replaces the old, with one the two are merged. It is the only thing that makes parallel writes safe.',
+    items: [
+      {name:'agent_results_reducer', kind:'custom reducer', f:'src/state.py', r:[19,23],
+       body:`<p>The only hand-written reducer here. It behaves like <code>operator.add</code> — concatenating what a node returns onto what is already in state — except that an <b>empty list means reset</b>.</p>
+             <p>That exception is what lets the orchestrator clear results from the previous turn: it returns <code>agent_results: []</code>, and instead of a no-op concatenation the key is emptied.</p>`},
+
+      {name:'agent_results', kind:'Annotated[list[dict], agent_results_reducer]', f:'src/state.py', r:[58,59],
+       body:`<p>The convergence point of the whole graph. Both agents run in the same superstep and both write here; the reducer merges those writes instead of letting the second overwrite the first.</p>
+             <p>Writes are applied in <b>dispatch order</b>, not completion order — so the entry for whichever agent the classifier listed first lands first, however long each one took.</p>`},
+
+      {name:'messages', kind:'Annotated[list[AnyMessage], operator.add]', f:'src/state.py', r:[50,51],
+       body:`<p>The conversation. <code>operator.add</code> on two lists is concatenation, so every node that returns messages appends rather than replaces.</p>
+             <p>Note what actually gets appended in this app: <code>main.py</code> adds the user's <code>HumanMessage</code> each turn, but never writes <code>final_answer</code> back — so the agents only ever see the customer's side of the conversation.</p>`},
+
+      {name:'messages', kind:'Annotated[list[AnyMessage], operator.add]', f:'src/nodes.py', r:[108,110],
+       body:`<p>The same reducer on the agent subgraph's own state. This is what makes the model ⇄ tools loop work: the model node returns one <code>AIMessage</code>, the tools node returns its <code>ToolMessage</code>s, and each is appended to the growing list that gets re-sent on the next pass.</p>`},
+
+      {name:'messages', kind:'Annotated[list[AnyMessage], operator.add]', f:'src/state.py', r:[65,74],
+       body:`<p><code>WorkerInput</code> is the payload each agent receives via <code>Send()</code>. It carries the same reducer for messages, plus two plain fields.</p>`},
+
+      {name:'user_query · tasks · requires_synthesis · final_answer', kind:'last write wins', kindClass:'none',
+       f:'src/state.py', r:[50,62], marks:[52,55,56,62],
+       body:`<p>Highlighted above are the four keys with no <code>Annotated[...]</code> wrapper, so they take the default: <b>last write wins</b>. The two unmarked lines in the same block — <code>messages</code> and <code>agent_results</code> — are the ones that do carry a reducer.</p>
+             <p>Which writer wins: <code>user_query</code>, <code>tasks</code> and <code>requires_synthesis</code> from <code>orchestrator_node</code>, <code>final_answer</code> from <code>synthesizer_node</code>. One writer each, so nothing is ever overwritten in practice.</p>
+             <p><code>WorkerInput</code> has two more of the same kind — <code>user_query</code> and <code>task_description</code> — set once by the <code>Send()</code> that starts the agent.</p>
+             <p>If two parallel nodes ever wrote to one of these in the same superstep, LangGraph would raise <code>InvalidUpdateError</code> rather than silently pick a winner — the missing reducer is the error, not the collision.</p>`},
+    ],
+  },
+
+  commands: {
+    title: 'Commands',
+    sub: 'A node normally returns a dict and the graph\'s edges decide what runs next. Returning a Command lets a node do both at once: update state and choose its own successor — which is how routing here is data, not wiring.',
+    items: [
+      {name:'from langgraph.types import Command, Send, interrupt', kind:'import', f:'src/nodes.py', r:[31,31],
+       body:`<p>The three runtime primitives this graph is built on: <code>Command</code> to update-and-route, <code>Send</code> to fan out, <code>interrupt</code> to suspend.</p>`},
+
+      {name:'orchestrator_node', kind:'Command[Literal[...]] annotation', f:'src/nodes.py', r:[225,225],
+       body:`<p>The return annotation is not decoration. Listing the possible destinations is how LangGraph knows this node can reach <code>product_agent</code>, <code>support_agent</code> and <code>synthesizer</code> when no static edge says so — it is what draws those edges on the graph.</p>`},
+
+      {name:'Command(update=…, goto=[Send(…), Send(…)])', kind:'fan out', f:'src/nodes.py', r:[264,283],
+       body:`<p>The dispatch. <code>update</code> writes the classification into state; <code>goto</code> carries a list of <code>Send</code> objects, one per task.</p>
+             <p>A <code>Send</code> is a node name plus <b>its own private payload</b> — not the shared state — so each agent receives only its own task description. Returning several of them in one <code>goto</code> is what makes the agents run concurrently in a single superstep.</p>
+             <p>The <code>agent_results: []</code> in that same update is the reset described under the reducers tab.</p>`},
+
+      {name:'Command(update=…, goto="synthesizer")', kind:'converge', f:'src/nodes.py', r:[305,308],
+       body:`<p>Each agent ends the same way: write its answer into <code>agent_results</code>, then hand control to the synthesizer by name. Same shape in <code>support_agent</code> at line 335.</p>`},
+
+      {name:'synthesizer_node', kind:'plain dict — no Command', kindClass:'none', f:'src/nodes.py', r:[345,346],
+       body:`<p>The contrast worth noticing. The synthesizer returns an ordinary dict because it has nowhere to choose — a static edge already wires it to <code>END</code>. <code>Command</code> earns its place only where the destination depends on the data.</p>`},
+
+      {name:'Command(resume=user_answer)', kind:'resume a paused graph', f:'src/main.py', r:[64,78],
+       body:`<p>A different use of the same class, from outside the graph. When a node calls <code>interrupt()</code> the graph suspends and <code>invoke()</code> returns early with <code>__interrupt__</code> set.</p>
+             <p>Invoking again with <code>Command(resume=…)</code> restores the checkpoint and re-enters the interrupted node <b>from the top</b> — everything above the <code>interrupt()</code> call runs a second time, and this time <code>interrupt()</code> returns the supplied value instead of raising.</p>`},
+    ],
+  },
+};
+
+let langTab = 'reducers';
+
+function snippet(path, a, b, marks){
+  const hit = new Set(marks || []);
+  const lines = highlight(path).slice(a - 1, b);
+  return `<div class="snip">` + lines.map((html, i) => {
+    const ln = a + i;
+    return `<div class="row${hit.has(ln) ? ' mark' : ''}"><span class="ln">${ln}</span>`
+         + `<span class="lc">${html || ' '}</span></div>`;
+  }).join('') + `</div>`;
+}
+
+function renderLang(){
+  PANE_REFS = [];
+  const sec = LANG[langTab];
+
+  const tabs = Object.keys(LANG).map(k => `
+    <button class="stab ${k === langTab ? 'on' : ''}" data-lang="${k}">
+      <span class="sq">${LANG[k].title}</span>
+    </button>`).join('');
+
+  const items = sec.items.map(it => `
+    <div class="lgitem">
+      <div class="lghead">
+        <span class="lgname">${esc(it.name)}</span>
+        <span class="lgkind ${it.kindClass || ''}">${esc(it.kind)}</span>
+        <span class="sp"></span>
+        ${refChip({f: it.f, r: [it.r]})}
+      </div>
+      <div class="lgbody">
+        ${snippet(it.f, it.r[0], it.r[1], it.marks)}
+        ${it.body}
+      </div>
+    </div>`).join('');
+
+  document.getElementById('langroot').innerHTML = `
+    <h1>LangGraph</h1>
+    <div class="subtabs"><div class="stwrap">${tabs}</div></div>
+    <div class="lgsec">
+      <h2>${esc(sec.title)}</h2>
+      <p class="sub">${esc(sec.sub)}</p>
+      ${items}
+    </div>`;
+
+  const root = document.getElementById('langroot');
+  root.querySelectorAll('.srcbtn[data-pref]').forEach(b => {
+    b.onclick = () => openSource(PANE_REFS[b.dataset.pref]);
+  });
+  root.querySelectorAll('.stab[data-lang]').forEach(b => {
+    b.onclick = () => { langTab = b.dataset.lang; renderLang(); document.getElementById('view-lang').scrollTop = 0; };
+  });
+}
+
 /* ── Tabs ─────────────────────────────────────────────────── */
 let view = 'exec';
 function setView(v){
@@ -1696,7 +1854,7 @@ function setView(v){
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'view-' + v));
   if(location.hash.slice(1) !== v) history.replaceState(null, '', '#' + v);
 }
-const VIEWS = ['exec', 'trace', 'data'];
+const VIEWS = ['exec', 'trace', 'data', 'lang'];
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => setView(t.dataset.view));
 window.addEventListener('hashchange', () => {
   const v = location.hash.slice(1);
@@ -1705,6 +1863,7 @@ window.addEventListener('hashchange', () => {
 
 renderData();
 renderTrace();
+renderLang();
 setView(VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'exec');
 </script>
 </body>
