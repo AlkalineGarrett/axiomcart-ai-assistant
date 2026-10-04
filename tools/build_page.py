@@ -2,7 +2,7 @@
 Rebuild graph-walkthrough.html from the current sources.
 
     python tools/build_page.py                 # embed src/ + data.py
-    python tools/build_page.py --capture trace.json   # also bake in a real run
+    python tools/build_page.py --capture artifacts/trace.json   # also bake in a real run
 
 The page is self-contained: every source file, the demo data, and
 optionally a captured trace are inlined between marker comments, so it
@@ -70,7 +70,7 @@ def inject(html: str, marker: str, payload: str) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser(description="Rebuild the self-contained walkthrough page")
     ap.add_argument("--capture", metavar="TRACE.JSON",
-                    help="bake a captured run into the Prompt Trace tab (default: trace.json if present)")
+                    help="bake a captured run into the Prompt Trace tab (default: artifacts/trace.json if present)")
     ap.add_argument("--no-capture", action="store_true", help="strip any baked-in capture")
     args = ap.parse_args()
 
@@ -85,7 +85,7 @@ def main() -> None:
 
     cap_path = None
     if not args.no_capture:
-        cap_path = pathlib.Path(args.capture) if args.capture else ROOT / "trace.json"
+        cap_path = pathlib.Path(args.capture) if args.capture else ROOT / "artifacts" / "trace.json"
         if not cap_path.exists():
             if args.capture:
                 sys.exit(f"no such capture: {cap_path}")
